@@ -17,7 +17,10 @@
         <p class="text-xs text-slate-400">Marco Fine Arts Catalog & Pricing Sync</p>
       </div>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center justify-end gap-3">
+      <a href="https://docs.google.com/spreadsheets/d/1NtVfiEp008RI-2yQupPD_cJiTQtV0fhGcmFeHEO_QQE/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-xs rounded-lg font-bold whitespace-nowrap" aria-label="Open the TMM SKU Google Sheet">
+        <i class="fa-solid fa-table-cells mr-1"></i> Open SKU Spreadsheet
+      </a>
       <input id="sheetUrl" type="text" placeholder="Paste Google Apps Script Web App URL" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg w-72 focus:outline-none focus:border-amber-500" />
       <button onclick="saveSheetUrl()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 text-xs rounded-lg font-semibold"><i class="fa-solid fa-link mr-1"></i> Connect Sheet</button>
       <button onclick="syncFromGoogleSheet()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-2 text-xs rounded-lg font-bold"><i class="fa-solid fa-arrows-rotate mr-1"></i> Pull Sheet Data</button>
