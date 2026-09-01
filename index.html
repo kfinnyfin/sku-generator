@@ -7,7 +7,16 @@
   <link rel="icon" type="image/png" href="assets/tmm-logo.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-  <style>.color-swatch{box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}</style>
+  <style>
+    .color-swatch{box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}
+    .sku-copy-button{display:inline-flex;align-items:center;gap:.45rem;max-width:100%;margin:-.3rem;padding:.3rem .45rem;border:1px solid transparent;border-radius:.45rem;color:#fbbf24;cursor:pointer;transition:background-color .15s ease,border-color .15s ease,color .15s ease}
+    .sku-copy-button:hover,.sku-copy-button:focus-visible{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.35);outline:none}
+    .sku-copy-action{display:inline-flex;align-items:center;gap:.25rem;color:#94a3b8;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.65rem;font-weight:600;opacity:0;transform:translateX(-.2rem);transition:opacity .15s ease,transform .15s ease,color .15s ease}
+    .sku-copy-button:hover .sku-copy-action,.sku-copy-button:focus-visible .sku-copy-action,.sku-copy-button.is-copied .sku-copy-action,.sku-copy-button.copy-failed .sku-copy-action{opacity:1;transform:translateX(0)}
+    .sku-copy-button.is-copied,.sku-copy-button.is-copied .sku-copy-action{color:#34d399}
+    .sku-copy-button.copy-failed,.sku-copy-button.copy-failed .sku-copy-action{color:#fb7185}
+    @media (hover:none){.sku-copy-action{opacity:1;transform:none}.sku-copy-label{display:none}.sku-copy-button.is-copied .sku-copy-label,.sku-copy-button.copy-failed .sku-copy-label{display:inline}}
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -718,6 +727,61 @@
       })[character]);
     }
 
+    function renderSkuCopyButton(sku) {
+      const safeSku = escapeHtml(sku);
+      return '<button type="button" class="sku-copy-button font-mono font-bold" data-sku="' + safeSku + '" aria-label="Copy SKU ' + safeSku + '" title="Copy SKU" onclick="copySku(event, this)"><span>' + safeSku + '</span><span class="sku-copy-action" aria-hidden="true"><i data-copy-icon class="fa-regular fa-copy"></i><span data-copy-label class="sku-copy-label">Copy</span></span></button>';
+    }
+
+    function fallbackCopyText(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const copied = document.execCommand("copy");
+      textarea.remove();
+      if (!copied) throw new Error("Clipboard copy was not available.");
+    }
+
+    async function copySku(event, button) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const sku = button.dataset.sku || "";
+      const icon = button.querySelector("[data-copy-icon]");
+      const label = button.querySelector("[data-copy-label]");
+      let copied = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(sku);
+        else fallbackCopyText(sku);
+        copied = true;
+      } catch (error) {
+        try {
+          fallbackCopyText(sku);
+          copied = true;
+        } catch (fallbackError) {
+          console.error(fallbackError);
+        }
+      }
+
+      clearTimeout(button._skuCopyTimer);
+      button.classList.toggle("is-copied", copied);
+      button.classList.toggle("copy-failed", !copied);
+      button.setAttribute("aria-label", copied ? "Copied SKU " + sku : "Could not copy SKU " + sku);
+      if (icon) icon.className = copied ? "fa-solid fa-check" : "fa-solid fa-xmark";
+      if (label) label.textContent = copied ? "Copied!" : "Try again";
+      button._skuCopyTimer = setTimeout(() => {
+        button.classList.remove("is-copied", "copy-failed");
+        button.setAttribute("aria-label", "Copy SKU " + sku);
+        if (icon) icon.className = "fa-regular fa-copy";
+        if (label) label.textContent = "Copy";
+      }, 1600);
+    }
+
     function toggleSkuGroup(groupId) {
       const row = document.getElementById(groupId);
       const icon = document.getElementById(groupId + "-icon");
@@ -741,7 +805,7 @@
         const label = (includeBrand ? escapeHtml(first.brand) + " - " : "") + escapeHtml(first.product) + " - " + escapeHtml(first.model);
         const tierClass = first.category === "Better" ? "text-amber-300" : "text-sky-300";
         const details = rows.map(item =>
-          '<tr class="border-t border-slate-800"><td class="p-2 text-amber-400 font-bold">' + escapeHtml(item.sku) + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2">' + escapeHtml(item.hits) + ' Hit</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
+          '<tr class="border-t border-slate-800"><td class="p-2">' + renderSkuCopyButton(item.sku) + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2">' + escapeHtml(item.hits) + ' Hit</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
         ).join("");
         return '<tr class="bg-slate-950/70 hover:bg-slate-700 cursor-pointer" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span><p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></div></td></tr>' +
           '<tr id="' + groupId + '" class="hidden"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-3 bg-slate-900"><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-slate-500 uppercase"><tr><th class="p-2">SKU</th><th class="p-2">Size</th><th class="p-2">Color</th><th class="p-2">Hits</th><th class="p-2">MFA Cost</th><th class="p-2">MSRP</th></tr></thead><tbody>' + details + '</tbody></table></div></td></tr>';
@@ -875,7 +939,7 @@
       const tbody = document.getElementById("previewTableBody");
       tbody.innerHTML = skus.slice(0, 100).map(s => `
         <tr class="hover:bg-slate-700/40">
-          <td class="p-3 text-amber-400 font-bold">${s.sku}</td>
+          <td class="p-3">${renderSkuCopyButton(s.sku)}</td>
           <td class="p-3 ${s.category === 'Better' ? 'text-amber-300' : 'text-sky-300'}">${s.category}</td>
           <td class="p-3 text-slate-300 font-sans">${s.product}</td>
           <td class="p-3">${s.size}</td>
