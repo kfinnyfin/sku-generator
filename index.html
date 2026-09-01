@@ -21,6 +21,12 @@
       </div>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3">
+      <div class="flex items-center gap-2 bg-slate-950/70 border border-slate-700 rounded-lg px-3 py-2">
+        <span id="cloudDot" class="h-2.5 w-2.5 rounded-full bg-slate-500" aria-hidden="true"></span>
+        <span id="cloudStatus" class="text-xs text-slate-300 whitespace-nowrap">Checking cloud...</span>
+        <button id="cloudRefreshButton" type="button" onclick="refreshFromCloud(true)" class="hidden text-slate-400 hover:text-white" aria-label="Refresh shared cloud data" title="Refresh shared cloud data"><i class="fa-solid fa-rotate"></i></button>
+        <button id="changePinButton" type="button" onclick="changeCloudPin()" class="hidden text-[11px] font-bold text-slate-400 hover:text-white border-l border-slate-700 pl-2">Change PIN</button>
+      </div>
       <a href="https://docs.google.com/spreadsheets/d/1NtVfiEp008RI-2yQupPD_cJiTQtV0fhGcmFeHEO_QQE/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-xs rounded-lg font-bold whitespace-nowrap" aria-label="Open the TMM SKU Google Sheet">
         <i class="fa-solid fa-table-cells mr-1"></i> Open SKU Spreadsheet
       </a>
@@ -29,6 +35,21 @@
       <button onclick="syncFromGoogleSheet()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-2 text-xs rounded-lg font-bold"><i class="fa-solid fa-arrows-rotate mr-1"></i> Pull Sheet Data</button>
     </div>
   </header>
+
+  <div id="pinGate" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center">
+      <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl">
+        <div class="flex items-center gap-3">
+          <img src="assets/tmm-logo.png" alt="Too Much Merch logo" class="h-16 w-16 object-contain" width="64" height="64" />
+          <div><h2 class="text-xl font-black">Team PIN</h2><p class="text-sm text-slate-400">Enter it once on this device</p></div>
+        </div>
+        <label for="teamPin" class="block mt-6 text-xs font-bold text-slate-300">4-digit code</label>
+        <input id="teamPin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="••••" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-center text-2xl tracking-[0.6em] font-mono focus:outline-none focus:border-emerald-500" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" onkeydown="if(event.key === 'Enter') unlockCloud()" />
+        <button id="pinSubmitButton" type="button" onclick="unlockCloud()" class="w-full mt-4 bg-emerald-600 hover:bg-emerald-500 rounded-lg py-3 font-bold"><i class="fa-solid fa-unlock-keyhole mr-2"></i>Open SKU Engine</button>
+        <p id="pinMessage" class="mt-4 text-sm text-slate-400" aria-live="polite">The app will remember this PIN on this device.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Navigation Tabs -->
   <nav class="bg-slate-800/50 border-b border-slate-700 px-6 flex flex-wrap gap-x-6 gap-y-1 text-sm font-semibold">
@@ -39,6 +60,11 @@
   </nav>
 
   <main class="p-6 max-w-7xl mx-auto">
+
+    <div id="cloudMigrationBanner" class="hidden mb-6 bg-sky-950 border border-sky-800 rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
+      <div><p class="font-bold text-sky-200"><i class="fa-solid fa-cloud-arrow-up mr-2"></i>Local catalogs found on this device</p><p class="text-sm text-slate-300 mt-1">Move them into the shared workspace once so they are available on your phone, computer, and teammates' devices.</p></div>
+      <button id="cloudMigrationButton" type="button" onclick="migrateLocalBrandsToCloud()" class="bg-sky-600 hover:bg-sky-500 px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap">Move local catalogs to cloud</button>
+    </div>
 
     <!-- TAB 1: ADD PRODUCTS & SKU CREATOR -->
     <section id="tab-create" class="space-y-6">
@@ -83,7 +109,7 @@
             <button type="button" onclick="cancelEdit()" class="block mt-2 underline font-bold">Cancel editing</button>
           </div>
           <button onclick="saveBrandData()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-sm flex justify-center items-center gap-2">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Save Brand & Push to Sheet
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save Brand & Sync Everywhere
           </button>
         </div>
 
@@ -262,6 +288,9 @@
   </main>
 
   <script>
+    const CLOUD_SYNC_URL = "https://elrzymdsicvynxdikixk.supabase.co/functions/v1/tmm-cloud-sync";
+    const CLOUD_PIN_STORAGE_KEY = "tmm_team_pin";
+
     const COLOR_GUIDE = {
       BLK: { name: "Black", hex: "#111827" },
       ASPH: { name: "Asphalt", hex: "#4B5563" },
@@ -420,9 +449,10 @@
     let masterData = [];
     let editingOriginalBrand = null;
     let inactivePanelOpen = false;
+    let cloudRefreshRunning = false;
 
     // Initialize UI
-    window.onload = () => {
+    window.onload = async () => {
       const savedUrl = localStorage.getItem("tmm_sheet_url");
       if (savedUrl) document.getElementById("sheetUrl").value = savedUrl;
       validatePricingIntegrity();
@@ -430,7 +460,196 @@
       renderHelpContent();
       applyAssortmentPreset();
       loadLocalBrands();
+      await initializeCloudSync();
     };
+
+    function setCloudStatus(message, state) {
+      const dot = document.getElementById("cloudDot");
+      document.getElementById("cloudStatus").innerText = message;
+      dot.className = "h-2.5 w-2.5 rounded-full " + (state === "ready" ? "bg-emerald-400" : state === "error" ? "bg-rose-400" : state === "busy" ? "bg-amber-400 animate-pulse" : "bg-slate-500");
+    }
+
+    function showPinGate(show, message) {
+      document.getElementById("pinGate").classList.toggle("hidden", !show);
+      if (message) {
+        document.getElementById("pinMessage").className = "mt-4 text-sm text-rose-300";
+        document.getElementById("pinMessage").innerText = message;
+      }
+      if (show) setTimeout(() => document.getElementById("teamPin").focus(), 0);
+    }
+
+    async function cloudRequest(action, payload) {
+      const pin = localStorage.getItem(CLOUD_PIN_STORAGE_KEY) || "";
+      if (!pin) {
+        showPinGate(true);
+        throw new Error("Team PIN required.");
+      }
+      const response = await fetch(CLOUD_SYNC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, pin, ...(payload || {}) })
+      });
+      let result = {};
+      try { result = await response.json(); }
+      catch (error) { throw new Error("The cloud returned an unreadable response."); }
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem(CLOUD_PIN_STORAGE_KEY);
+          showPinGate(true, result.error || "That PIN is not recognized.");
+        }
+        throw new Error(result.error || "The shared workspace did not confirm the request.");
+      }
+      return result;
+    }
+
+    async function unlockCloud() {
+      const input = document.getElementById("teamPin");
+      const button = document.getElementById("pinSubmitButton");
+      const message = document.getElementById("pinMessage");
+      const pin = input.value.trim();
+      if (!/^\d{4}$/.test(pin)) {
+        message.className = "mt-4 text-sm text-rose-300";
+        message.innerText = "Enter a 4-digit PIN.";
+        input.focus();
+        return;
+      }
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Checking PIN...';
+      localStorage.setItem(CLOUD_PIN_STORAGE_KEY, pin);
+      try {
+        await cloudRequest("verifyPin");
+        input.value = "";
+        message.className = "mt-4 text-sm text-slate-400";
+        message.innerText = "The app will remember this PIN on this device.";
+        showPinGate(false);
+        document.getElementById("cloudRefreshButton").classList.remove("hidden");
+        document.getElementById("changePinButton").classList.remove("hidden");
+        await refreshFromCloud(false);
+      } catch (error) {
+        localStorage.removeItem(CLOUD_PIN_STORAGE_KEY);
+        message.className = "mt-4 text-sm text-rose-300";
+        message.innerText = error.message;
+      } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-unlock-keyhole mr-2"></i>Open SKU Engine';
+      }
+    }
+
+    function changeCloudPin() {
+      localStorage.removeItem(CLOUD_PIN_STORAGE_KEY);
+      document.getElementById("teamPin").value = "";
+      document.getElementById("pinMessage").className = "mt-4 text-sm text-slate-400";
+      document.getElementById("pinMessage").innerText = "Enter another team PIN. The app will remember it on this device.";
+      setCloudStatus("PIN needed", "offline");
+      showPinGate(true);
+    }
+
+    async function initializeCloudSync() {
+      if (!localStorage.getItem(CLOUD_PIN_STORAGE_KEY)) {
+        setCloudStatus("PIN needed", "offline");
+        showPinGate(true);
+        return;
+      }
+      document.getElementById("cloudRefreshButton").classList.remove("hidden");
+      document.getElementById("changePinButton").classList.remove("hidden");
+      await refreshFromCloud(false);
+    }
+
+    function normalizedAssortment(value) {
+      const text = String(value || "Custom").toLowerCase();
+      return text === "better" ? "Better" : text === "best" ? "Best" : "Custom";
+    }
+
+    async function refreshFromCloud(showNotice) {
+      if (cloudRefreshRunning) return;
+      cloudRefreshRunning = true;
+      setCloudStatus("Syncing...", "busy");
+      try {
+        const localBrandsBefore = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+        const result = await cloudRequest("fetchAll");
+        const catalogs = Array.isArray(result.catalogs) ? result.catalogs : [];
+
+        if (catalogs && catalogs.length) {
+          const brands = {};
+          const meta = {};
+          catalogs.forEach(catalog => {
+            brands[catalog.name] = Array.isArray(catalog.skus) ? catalog.skus : [];
+            meta[catalog.name] = {
+              id: catalog.id,
+              name: catalog.name,
+              code: catalog.code,
+              assortment: normalizedAssortment(catalog.assortment),
+              active: catalog.active !== false,
+              products: catalog.products || {},
+              skus: Array.isArray(catalog.skus) ? catalog.skus : [],
+              updatedAt: catalog.updated_at
+            };
+          });
+          localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
+          setBrandMeta(meta);
+          document.getElementById("cloudMigrationBanner").classList.add("hidden");
+          loadLocalBrands();
+        } else if (Object.keys(localBrandsBefore).length) {
+          document.getElementById("cloudMigrationBanner").classList.remove("hidden");
+        }
+
+        if (result.standardPrices && Object.keys(result.standardPrices).length) {
+          const previousPrices = getStandardPrices();
+          saveStandardPricesLocally(result.standardPrices);
+          renderStandardPriceTable();
+          applyStandardPricesToNewBrandForm(previousPrices, false);
+        }
+        setCloudStatus("Shared cloud · synced", "ready");
+        if (showNotice) alert("Shared cloud data is up to date on this device.");
+      } catch (error) {
+        console.error(error);
+        setCloudStatus("Sync failed", "error");
+        if (showNotice) alert("Cloud refresh failed: " + error.message);
+      } finally {
+        cloudRefreshRunning = false;
+      }
+    }
+
+    function requireCloudAccess() {
+      if (localStorage.getItem(CLOUD_PIN_STORAGE_KEY)) return true;
+      showPinGate(true);
+      return false;
+    }
+
+    async function upsertBrandToCloud(config, previousName) {
+      if (!requireCloudAccess()) throw new Error("Team PIN required.");
+      await cloudRequest("saveBrand", { config, previousName });
+    }
+
+    async function saveStandardPricesToCloud(prices) {
+      if (!requireCloudAccess()) throw new Error("Team PIN required.");
+      await cloudRequest("saveStandardPrices", { prices });
+    }
+
+    async function migrateLocalBrandsToCloud() {
+      if (!requireCloudAccess()) return;
+      const button = document.getElementById("cloudMigrationButton");
+      const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const meta = getBrandMeta();
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Moving catalogs...';
+      try {
+        for (const name of Object.keys(brands)) {
+          const config = { ...(meta[name] || {}), name, skus: brands[name], active: meta[name]?.active !== false };
+          await upsertBrandToCloud(config, null);
+        }
+        await saveStandardPricesToCloud(getStandardPrices());
+        document.getElementById("cloudMigrationBanner").classList.add("hidden");
+        await refreshFromCloud(false);
+        alert("Your local catalogs are now in the shared workspace and available on every device that opens this app.");
+      } catch (error) {
+        console.error(error);
+        alert("The local catalogs are still safe on this device, but the cloud move did not finish: " + error.message);
+      } finally {
+        button.disabled = false;
+        button.innerText = "Move local catalogs to cloud";
+      }
+    }
 
     function saveSheetUrl() {
       const url = document.getElementById("sheetUrl").value.trim();
@@ -741,6 +960,7 @@
     }
 
     async function updateStandardPrices() {
+      if (!requireCloudAccess()) return;
       const previousPrices = getStandardPrices();
       const prices = {};
       for (const model of Object.keys(DEFAULT_STANDARD_PRICES)) {
@@ -753,18 +973,25 @@
         prices[model] = Number(value.toFixed(2));
       }
 
-      saveStandardPricesLocally(prices);
-      applyStandardPricesToNewBrandForm(previousPrices, false);
-      const status = document.getElementById("standardPriceStatus");
-      status.className = "text-xs text-emerald-400";
-      status.innerText = "Standard Prices updated. Existing saved brands were not changed.";
-
       try {
-        const result = await postToSheet({ action: "saveStandardPrices", standardPrices: prices });
-        alert(result ? "Standard Prices updated locally and in Google Sheets. Existing brands were not changed." : "Standard Prices updated in this browser. Connect Google Sheets to share them across browsers.");
+        await saveStandardPricesToCloud(prices);
+        saveStandardPricesLocally(prices);
+        applyStandardPricesToNewBrandForm(previousPrices, false);
+        const status = document.getElementById("standardPriceStatus");
+        status.className = "text-xs text-emerald-400";
+        status.innerText = "Standard Prices updated in the shared workspace. Existing saved brands were not changed.";
+        let sheetMessage = "";
+        try {
+          const result = await postToSheet({ action: "saveStandardPrices", standardPrices: prices });
+          sheetMessage = result ? " Google Sheets was updated too." : "";
+        } catch (sheetError) {
+          console.error(sheetError);
+          sheetMessage = " The cloud copy is safe, but Google Sheets did not confirm its update.";
+        }
+        alert("Standard Prices updated in the shared workspace. Existing brands were not changed." + sheetMessage);
       } catch (error) {
         console.error(error);
-        alert("Standard Prices were updated in this browser, but Google Sheets did not confirm the shared update: " + error.message);
+        alert("Standard Prices were not changed because the shared cloud workspace did not confirm the update: " + error.message);
       }
     }
 
@@ -858,6 +1085,7 @@
     }
 
     async function saveBrandData() {
+      if (!requireCloudAccess()) return;
       const brandName = document.getElementById("brandName").value.trim();
       if (!brandName) return alert("Please specify a Brand Name.");
       const skus = generateCurrentSKUs();
@@ -876,18 +1104,26 @@
       brands[brandName] = skus;
       const config = getCurrentBrandConfig(brandName, skus, active);
       meta[brandName] = config;
-      localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
-      setBrandMeta(meta);
-      loadLocalBrands();
-
       try {
-        const result = await postToSheet({ action: "saveBrand", brandName: brandName, previousBrandName: previousName, catalogStatus: active ? "active" : "inactive", catalog: config, skus: skus });
-        alert(result ? "Saved " + skus.length + " SKUs locally and to Google Sheets." : "Saved locally. Connect the Google Sheet to sync this catalog.");
+        await upsertBrandToCloud(config, previousName);
+        localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
+        setBrandMeta(meta);
+        loadLocalBrands();
+        let sheetMessage = "";
+        try {
+          const result = await postToSheet({ action: "saveBrand", brandName: brandName, previousBrandName: previousName, catalogStatus: active ? "active" : "inactive", catalog: config, skus: skus });
+          sheetMessage = result ? " Google Sheets was updated too." : "";
+        } catch (sheetError) {
+          console.error(sheetError);
+          sheetMessage = " The cloud copy is safe, but Google Sheets did not confirm its update.";
+        }
+        setCloudStatus("Shared cloud · synced", "ready");
+        alert("Saved " + skus.length + " SKUs to the shared workspace." + sheetMessage);
         cancelEdit();
         switchTab("tab-tiles");
       } catch (error) {
         console.error(error);
-        alert("Saved locally, but Google Sheets did not confirm the update: " + error.message);
+        alert("Nothing was changed because the shared cloud workspace did not confirm the save: " + error.message);
       }
     }
 
@@ -983,28 +1219,30 @@
     }
 
     async function setBrandActive(brandName, active) {
+      if (!requireCloudAccess()) return;
       const meta = getBrandMeta();
       if (!meta[brandName]) return;
-      const previous = meta[brandName].active !== false;
-      meta[brandName].active = active;
-      setBrandMeta(meta);
-      loadLocalBrands();
       try {
-        await postToSheet({ action: "setBrandStatus", brandName: brandName, status: active ? "active" : "inactive" });
-      } catch (error) {
-        meta[brandName].active = previous;
+        await cloudRequest("setBrandStatus", { brandName, active });
+        meta[brandName].active = active;
         setBrandMeta(meta);
         loadLocalBrands();
-        alert("The status change was rolled back because Google Sheets did not confirm it: " + error.message);
+        try { await postToSheet({ action: "setBrandStatus", brandName: brandName, status: active ? "active" : "inactive" }); }
+        catch (sheetError) { console.error(sheetError); alert("The shared catalog status was updated, but Google Sheets did not confirm the change."); }
+      } catch (error) {
+        alert("The status was not changed because the shared workspace did not confirm it: " + error.message);
       }
     }
 
     async function deleteBrand(brandName) {
+      if (!requireCloudAccess()) return;
       if (!confirm("Permanently delete " + brandName + "? This cannot be undone.")) return;
+      try { await cloudRequest("deleteBrand", { brandName }); }
+      catch (cloudError) { return alert("Nothing was deleted because the shared workspace did not confirm it: " + cloudError.message); }
       const sheetUrl = document.getElementById("sheetUrl").value.trim();
       if (sheetUrl) {
         try { await postToSheet({ action: "deleteBrand", brandName: brandName }); }
-        catch (error) { return alert("Nothing was deleted because Google Sheets did not confirm it: " + error.message); }
+        catch (error) { console.error(error); alert("The catalog was deleted from the shared workspace, but Google Sheets did not confirm its deletion."); }
       }
       const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
       const meta = getBrandMeta();
