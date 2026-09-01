@@ -71,7 +71,7 @@
           </div>
           <div class="bg-slate-950 border border-slate-700 rounded-lg p-3 space-y-2">
             <p class="text-xs font-semibold text-slate-300">Manual MSRP</p>
-            <p class="text-[11px] text-slate-500">Enter MSRP beside each garment, or import a CSV with <code>model,msrp</code> columns.</p>
+            <p class="text-[11px] text-slate-500">Standard Prices prefill each garment. You can override any MSRP here, or import a CSV with <code>model,msrp</code> columns.</p>
             <div class="flex flex-wrap gap-2">
               <label class="cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-upload mr-1"></i> Import CSV<input id="msrpFile" type="file" accept=".csv,text/csv" class="hidden" onchange="importMsrpCsv(event)" /></label>
               <button type="button" onclick="downloadMsrpTemplate()" class="bg-slate-800 border border-slate-600 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-download mr-1"></i> Template</button>
@@ -91,7 +91,7 @@
           <div class="flex justify-between items-center">
             <div>
               <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-palette mr-2"></i>Garments & Colorways</h2>
-              <p class="text-xs text-slate-400">Exact TMM colors are pre-loaded. MSRP is always entered by you and is never calculated.</p>
+              <p class="text-xs text-slate-400">Exact TMM colors are pre-loaded. MSRP starts from the editable Standard Price and is never calculated from MFA cost.</p>
             </div>
             <div class="space-x-2">
               <button onclick="selectAllGarments(true)" class="text-xs bg-slate-900 border border-slate-700 px-2 py-1 rounded text-slate-300 hover:text-amber-400">Select All</button>
@@ -227,7 +227,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">1</span><h3 class="font-bold mt-2">Enter the brand</h3><p class="text-sm text-slate-400 mt-2">Add the full brand name and confirm its short prefix.</p></div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">2</span><h3 class="font-bold mt-2">Choose Better or Best</h3><p class="text-sm text-slate-400 mt-2">The preset selects the correct five program garments. Custom allows a mix.</p></div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">3</span><h3 class="font-bold mt-2">Set colors and MSRP</h3><p class="text-sm text-slate-400 mt-2">Edit color codes and manually enter MSRP for every selected garment.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">3</span><h3 class="font-bold mt-2">Set colors and MSRP</h3><p class="text-sm text-slate-400 mt-2">Standard Prices prefill MSRP. Override any garment when a partner needs different pricing.</p></div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">4</span><h3 class="font-bold mt-2">Save and maintain</h3><p class="text-sm text-slate-400 mt-2">Save, edit, deactivate, reactivate, or permanently delete the portfolio.</p></div>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
@@ -238,6 +238,18 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6"><h3 class="font-bold text-lg text-amber-400">Better Assortment</h3><div id="betterGuide" class="space-y-2 mt-4"></div></div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6"><h3 class="font-bold text-lg text-sky-400">Best Assortment</h3><div id="bestGuide" class="space-y-2 mt-4"></div></div>
+      </div>
+      <div id="standard-prices" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.18em] font-bold text-emerald-400">Admin</p>
+            <h3 class="font-bold text-xl mt-1">Standard Prices</h3>
+            <p class="text-sm text-slate-400 mt-1 max-w-3xl">One flat default MSRP per product, independent of size, print hits, and MFA cost. Changes apply to new brand forms only and never rewrite already-saved brand pricing.</p>
+          </div>
+          <button type="button" onclick="updateStandardPrices()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap"><i class="fa-solid fa-floppy-disk mr-1"></i> Update Standard Prices</button>
+        </div>
+        <div id="standardPriceTable" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+        <p id="standardPriceStatus" class="text-xs text-slate-500" aria-live="polite">These prices are used as the starting MSRP for newly-generated brands.</p>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 class="font-bold text-lg">Color Code Guide</h3>
@@ -275,6 +287,19 @@
     const BETTER_MODELS = ["3001", "3501", "JHA030", "JHA001", "3739"];
     const BEST_MODELS = ["1717", "3601", "LS14004", "LS14001", "9602"];
     const getCategory = id => BETTER_MODELS.includes(id) ? "Better" : "Best";
+    const STANDARD_PRICE_STORAGE_KEY = "tmm_standard_prices";
+    const DEFAULT_STANDARD_PRICES = Object.freeze({
+      "3001": 30,
+      "3501": 35,
+      "JHA030": 40,
+      "JHA001": 50,
+      "3739": 60,
+      "1717": 35,
+      "3601": 40,
+      "LS14004": 45,
+      "LS14001": 55,
+      "9602": 65
+    });
 
     // --- COMPLETE MARCO FINE ARTS CATALOG WITH TMM PROGRAM COLORS ---
     const MFA_CATALOG = [
@@ -436,6 +461,37 @@
       catch (e) { return {}; }
     }
 
+    function getStandardPrices() {
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(STANDARD_PRICE_STORAGE_KEY) || "{}"); }
+      catch (e) { saved = {}; }
+      const prices = {};
+      Object.keys(DEFAULT_STANDARD_PRICES).forEach(model => {
+        const value = Number(saved[model]);
+        prices[model] = Number.isFinite(value) && value >= 0 ? value : DEFAULT_STANDARD_PRICES[model];
+      });
+      return prices;
+    }
+
+    function saveStandardPricesLocally(prices) {
+      localStorage.setItem(STANDARD_PRICE_STORAGE_KEY, JSON.stringify(prices));
+    }
+
+    function applyStandardPricesToNewBrandForm(previousPrices, force) {
+      if (editingOriginalBrand) return;
+      const prices = getStandardPrices();
+      MFA_CATALOG.forEach(g => {
+        const input = document.getElementById("msrp-" + g.id);
+        if (!input) return;
+        const currentValue = input.value === "" ? null : Number(input.value);
+        const previousValue = previousPrices ? Number(previousPrices[g.id]) : null;
+        if (force || currentValue == null || (Number.isFinite(previousValue) && currentValue === previousValue)) {
+          input.value = prices[g.id].toFixed(2);
+        }
+      });
+      renderGeneratedMatrix();
+    }
+
     function escapeHtml(value) {
       return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -505,6 +561,7 @@
 
     function renderGarmentSelectors() {
       const container = document.getElementById("garmentList");
+      const standardPrices = getStandardPrices();
       container.innerHTML = MFA_CATALOG.map((g) => `
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3 text-xs">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -517,7 +574,7 @@
           <div class="grid grid-cols-1 md:grid-cols-[1fr_110px_140px] gap-3">
             <div><label class="text-[11px] text-slate-400">Color codes</label><input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-200 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" /></div>
             <div><label class="text-[11px] text-slate-400">Hits</label><select id="hits-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px]" onchange="renderGeneratedMatrix()"><option value="1">1 - Front</option><option value="2" selected>2 - Back + Pocket</option></select></div>
-            <div><label class="text-[11px] text-slate-400">Manual MSRP</label><div class="relative"><span class="absolute left-3 top-2 text-slate-500">$</span><input type="number" id="msrp-${g.id}" min="0" step="0.01" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 pl-7 pr-2 py-2 rounded text-slate-100 text-[11px] focus:outline-none focus:border-amber-500" oninput="renderGeneratedMatrix()" /></div></div>
+            <div><label class="text-[11px] text-slate-400">Manual MSRP</label><div class="relative"><span class="absolute left-3 top-2 text-slate-500">$</span><input type="number" id="msrp-${g.id}" min="0" step="0.01" value="${standardPrices[g.id].toFixed(2)}" class="w-full bg-slate-900 border border-slate-700 pl-7 pr-2 py-2 rounded text-slate-100 text-[11px] focus:outline-none focus:border-amber-500" oninput="renderGeneratedMatrix()" /></div></div>
           </div>
           <div class="flex flex-wrap gap-1">${g.defaultColors.map(code => colorChip(code)).join('')}</div>
         </div>
@@ -663,9 +720,51 @@
       const row = g => '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3"><span class="font-bold">' + g.mfr + " " + g.id + '</span><p class="text-xs text-slate-400">' + g.name + '</p></div>';
       document.getElementById("betterGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Better").map(row).join("");
       document.getElementById("bestGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Best").map(row).join("");
+      renderStandardPriceTable();
       document.getElementById("colorGuide").innerHTML = Object.entries(COLOR_GUIDE).map(([code, color]) =>
         '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3 flex items-center gap-3"><span class="color-swatch w-9 h-9 rounded-lg border border-slate-600 shrink-0" style="background:' + color.hex + '"></span><div><div class="font-mono font-bold text-amber-300">' + code + '</div><div class="text-xs text-slate-400">' + color.name + (color.unconfirmed ? ' <span class="text-rose-300">(confirm with Kayla)</span>' : "") + '</div></div></div>'
       ).join("");
+    }
+
+    function renderStandardPriceTable() {
+      const prices = getStandardPrices();
+      const tierColumn = (tier, models, accentClass) =>
+        '<div class="bg-slate-950 border border-slate-700 rounded-xl overflow-hidden"><div class="px-4 py-3 border-b border-slate-700 font-bold ' + accentClass + '">' + tier + '</div><div class="divide-y divide-slate-800">' +
+        models.map(model => {
+          const garment = MFA_CATALOG.find(g => g.id === model);
+          return '<label class="grid grid-cols-[1fr_110px] items-center gap-4 px-4 py-3"><span><span class="block text-sm font-semibold text-slate-200">' + escapeHtml(garment.name) + '</span><span class="text-xs text-slate-500">' + escapeHtml(garment.mfr) + ' - ' + escapeHtml(model) + '</span></span><span class="relative"><span class="absolute left-3 top-2.5 text-slate-500">$</span><input id="standard-price-' + escapeHtml(model) + '" type="number" min="0" step="0.01" value="' + prices[model].toFixed(2) + '" aria-label="Standard price for ' + escapeHtml(garment.name) + '" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-3 py-2 text-sm font-mono focus:outline-none focus:border-emerald-500" /></span></label>';
+        }).join("") + '</div></div>';
+      document.getElementById("standardPriceTable").innerHTML =
+        tierColumn("Better", BETTER_MODELS, "text-amber-300") +
+        tierColumn("Best", BEST_MODELS, "text-sky-300");
+    }
+
+    async function updateStandardPrices() {
+      const previousPrices = getStandardPrices();
+      const prices = {};
+      for (const model of Object.keys(DEFAULT_STANDARD_PRICES)) {
+        const input = document.getElementById("standard-price-" + model);
+        const value = Number(input.value);
+        if (!Number.isFinite(value) || value < 0) {
+          input.focus();
+          return alert("Enter a valid Standard Price for model " + model + ".");
+        }
+        prices[model] = Number(value.toFixed(2));
+      }
+
+      saveStandardPricesLocally(prices);
+      applyStandardPricesToNewBrandForm(previousPrices, false);
+      const status = document.getElementById("standardPriceStatus");
+      status.className = "text-xs text-emerald-400";
+      status.innerText = "Standard Prices updated. Existing saved brands were not changed.";
+
+      try {
+        const result = await postToSheet({ action: "saveStandardPrices", standardPrices: prices });
+        alert(result ? "Standard Prices updated locally and in Google Sheets. Existing brands were not changed." : "Standard Prices updated in this browser. Connect Google Sheets to share them across browsers.");
+      } catch (error) {
+        console.error(error);
+        alert("Standard Prices were updated in this browser, but Google Sheets did not confirm the shared update: " + error.message);
+      }
     }
 
     function downloadCsv(filename, csv) {
@@ -783,7 +882,7 @@
       try {
         const result = await postToSheet({ action: "saveBrand", brandName: brandName, previousBrandName: previousName, catalogStatus: active ? "active" : "inactive", catalog: config, skus: skus });
         alert(result ? "Saved " + skus.length + " SKUs locally and to Google Sheets." : "Saved locally. Connect the Google Sheet to sync this catalog.");
-        cancelEdit(false);
+        cancelEdit();
         switchTab("tab-tiles");
       } catch (error) {
         console.error(error);
@@ -870,13 +969,14 @@
       editingOriginalBrand = null;
       document.getElementById("editBanner").classList.add("hidden");
       if (clearForm === false) return;
+      const standardPrices = getStandardPrices();
       document.getElementById("brandName").value = "";
       document.getElementById("brandCode").value = "";
       document.getElementById("assortmentPreset").value = "Better";
       MFA_CATALOG.forEach(g => {
         document.getElementById("colors-" + g.id).value = g.defaultColors.join(", ");
         document.getElementById("hits-" + g.id).value = "2";
-        document.getElementById("msrp-" + g.id).value = "";
+        document.getElementById("msrp-" + g.id).value = standardPrices[g.id].toFixed(2);
       });
       applyAssortmentPreset();
     }
@@ -941,6 +1041,12 @@
         const res = await fetch(`${sheetUrl}?action=fetchAll`);
         const result = await res.json();
         if (result.status === "success") {
+          if (result.standardPrices && Object.keys(result.standardPrices).length) {
+            const previousPrices = getStandardPrices();
+            saveStandardPricesLocally(result.standardPrices);
+            renderStandardPriceTable();
+            applyStandardPricesToNewBrandForm(previousPrices, false);
+          }
           if (Array.isArray(result.catalogs) && result.catalogs.length) {
             const brands = {};
             const meta = {};
