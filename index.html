@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Too Much Merch - SKU Management Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>.color-swatch{box-shadow:inset 0 0 0 1px rgba(255,255,255,.24)}</style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -28,10 +30,11 @@
   </header>
 
   <!-- Navigation Tabs -->
-  <nav class="bg-slate-800/50 border-b border-slate-700 px-6 flex gap-6 text-sm font-semibold">
+  <nav class="bg-slate-800/50 border-b border-slate-700 px-6 flex flex-wrap gap-x-6 gap-y-1 text-sm font-semibold">
     <button onclick="switchTab('tab-create')" id="btn-create" class="py-3 border-b-2 border-amber-500 text-amber-400">1. Add Brand & Configure SKUs</button>
     <button onclick="switchTab('tab-tiles')" id="btn-tiles" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">2. Brand Portfolios</button>
     <button onclick="switchTab('tab-master')" id="btn-master" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">3. Master SKU Matrix</button>
+    <button onclick="switchTab('tab-help')" id="btn-help" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200"><i class="fa-solid fa-circle-question mr-1"></i> Instructions & Color Guide</button>
   </nav>
 
   <main class="p-6 max-w-7xl mx-auto">
@@ -52,11 +55,31 @@
             <input id="brandCode" type="text" placeholder="e.g. GB" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm uppercase focus:border-amber-500 focus:outline-none" oninput="renderGeneratedMatrix()" />
           </div>
           <div>
+            <label class="text-xs font-semibold text-slate-400">Program Assortment</label>
+            <select id="assortmentPreset" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm focus:border-amber-500 focus:outline-none" onchange="applyAssortmentPreset()">
+              <option value="Better">Better - Core Styles</option>
+              <option value="Best">Best - Premium Styles</option>
+              <option value="Custom">Custom Mix</option>
+            </select>
+          </div>
+          <div>
             <label class="text-xs font-semibold text-slate-400">Print Hits Placement</label>
             <div class="grid grid-cols-2 gap-2 mt-1">
               <button type="button" onclick="setGlobalHits(1)" id="btn-hit-1" class="bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700">1 Hit (Front)</button>
               <button type="button" onclick="setGlobalHits(2)" id="btn-hit-2" class="bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs">2 Hits (Back + Pocket)</button>
             </div>
+          </div>
+          <div class="bg-slate-950 border border-slate-700 rounded-lg p-3 space-y-2">
+            <p class="text-xs font-semibold text-slate-300">Manual MSRP</p>
+            <p class="text-[11px] text-slate-500">Enter MSRP beside each garment, or import a CSV with <code>model,msrp</code> columns.</p>
+            <div class="flex flex-wrap gap-2">
+              <label class="cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-upload mr-1"></i> Import CSV<input id="msrpFile" type="file" accept=".csv,text/csv" class="hidden" onchange="importMsrpCsv(event)" /></label>
+              <button type="button" onclick="downloadMsrpTemplate()" class="bg-slate-800 border border-slate-600 px-3 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-download mr-1"></i> Template</button>
+            </div>
+          </div>
+          <div id="editBanner" class="hidden bg-sky-950 border border-sky-800 text-sky-200 rounded-lg p-3 text-xs">
+            <span id="editBannerText"></span>
+            <button type="button" onclick="cancelEdit()" class="block mt-2 underline font-bold">Cancel editing</button>
           </div>
           <button onclick="saveBrandData()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-sm flex justify-center items-center gap-2">
             <i class="fa-solid fa-cloud-arrow-up"></i> Save Brand & Push to Sheet
@@ -68,7 +91,7 @@
           <div class="flex justify-between items-center">
             <div>
               <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-palette mr-2"></i>Garments & Colorways</h2>
-              <p class="text-xs text-slate-400">Exact TMM catalog colors pre-loaded. Edit or delete any color code to customize.</p>
+              <p class="text-xs text-slate-400">Exact TMM colors are pre-loaded. MSRP is always entered by you and is never calculated.</p>
             </div>
             <div class="space-x-2">
               <button onclick="selectAllGarments(true)" class="text-xs bg-slate-900 border border-slate-700 px-2 py-1 rounded text-slate-300 hover:text-amber-400">Select All</button>
@@ -97,12 +120,13 @@
             <thead class="bg-slate-950 text-slate-400 uppercase sticky top-0">
               <tr>
                 <th class="p-3">Generated SKU</th>
+                <th class="p-3">Tier</th>
                 <th class="p-3">Product Name</th>
                 <th class="p-3">Size</th>
                 <th class="p-3">Color</th>
                 <th class="p-3">Hits</th>
                 <th class="p-3">Cost (MFA)</th>
-                <th class="p-3">Target MSRP (2.2x)</th>
+                <th class="p-3">Manual MSRP</th>
               </tr>
             </thead>
             <tbody id="previewTableBody" class="divide-y divide-slate-700 font-mono"></tbody>
@@ -145,6 +169,15 @@
           </table>
         </div>
       </div>
+      <div class="border-t border-slate-700 pt-6">
+        <button type="button" onclick="toggleInactivePanel()" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center font-bold">
+          <span><i class="fa-solid fa-box-archive mr-2 text-slate-400"></i>Deactivated Brands <span id="inactiveCount" class="ml-2 text-xs bg-slate-950 rounded-full px-2 py-1 text-slate-400">0</span></span>
+          <i id="inactiveChevron" class="fa-solid fa-chevron-down text-slate-400"></i>
+        </button>
+        <div id="inactivePanel" class="hidden mt-4">
+          <div id="inactiveBrandGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        </div>
+      </div>
     </section>
 
     <!-- TAB 3: MASTER SKU MATRIX -->
@@ -153,10 +186,14 @@
         <div class="flex flex-wrap gap-3 items-center flex-1">
           <input id="searchMaster" type="text" placeholder="Search SKU, Product, Brand..." class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg w-60 focus:border-amber-500 focus:outline-none" oninput="filterMasterMatrix()" />
           <select id="filterBrand" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg focus:border-amber-500" onchange="filterMasterMatrix()"><option value="">All Brands</option></select>
+          <select id="filterCategory" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg focus:border-amber-500" onchange="filterMasterMatrix()"><option value="">Better & Best</option><option value="Better">Better</option><option value="Best">Best</option></select>
           <select id="filterSize" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg focus:border-amber-500" onchange="filterMasterMatrix()"><option value="">All Sizes</option></select>
           <select id="filterColor" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg focus:border-amber-500" onchange="filterMasterMatrix()"><option value="">All Colors</option></select>
         </div>
-        <span id="masterRowCount" class="text-xs text-slate-400 font-mono">Showing 0 rows</span>
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="exportMasterShopify()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-xs rounded-lg font-bold"><i class="fa-brands fa-shopify mr-1"></i> Export Master for Shopify</button>
+          <span id="masterRowCount" class="text-xs text-slate-400 font-mono">Showing 0 rows</span>
+        </div>
       </div>
 
       <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
@@ -165,6 +202,7 @@
             <thead class="bg-slate-950 text-slate-400 uppercase sticky top-0 font-sans">
               <tr>
                 <th class="p-3">Brand</th>
+                <th class="p-3">Tier</th>
                 <th class="p-3">SKU</th>
                 <th class="p-3">Product Name</th>
                 <th class="p-3">Blank Model</th>
@@ -181,9 +219,63 @@
       </div>
     </section>
 
+    <section id="tab-help" class="hidden space-y-6">
+      <div>
+        <h2 class="text-2xl font-bold">Instructions & Color Guide</h2>
+        <p class="text-sm text-slate-400 mt-1">How to build and maintain a TMM brand catalog.</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">1</span><h3 class="font-bold mt-2">Enter the brand</h3><p class="text-sm text-slate-400 mt-2">Add the full brand name and confirm its short prefix.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">2</span><h3 class="font-bold mt-2">Choose Better or Best</h3><p class="text-sm text-slate-400 mt-2">The preset selects the correct five program garments. Custom allows a mix.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">3</span><h3 class="font-bold mt-2">Set colors and MSRP</h3><p class="text-sm text-slate-400 mt-2">Edit color codes and manually enter MSRP for every selected garment.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">4</span><h3 class="font-bold mt-2">Save and maintain</h3><p class="text-sm text-slate-400 mt-2">Save, edit, deactivate, reactivate, or permanently delete the portfolio.</p></div>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+        <h3 class="font-bold text-lg text-amber-400">How each SKU is built</h3>
+        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-4 overflow-x-auto"><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB</span>-<span class="text-sky-300">3001</span>-<span class="text-violet-300">S</span>-<span class="text-emerald-300">BLK</span>-<span class="text-rose-300">2</span></code></div>
+        <p class="text-sm text-slate-400 mt-3">Brand prefix - Garment model - Size - Color code - Number of print hits.</p>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6"><h3 class="font-bold text-lg text-amber-400">Better Assortment</h3><div id="betterGuide" class="space-y-2 mt-4"></div></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6"><h3 class="font-bold text-lg text-sky-400">Best Assortment</h3><div id="bestGuide" class="space-y-2 mt-4"></div></div>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
+        <h3 class="font-bold text-lg">Color Code Guide</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-5">Each code includes its full name and a visual swatch.</p>
+        <div id="colorGuide" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+      </div>
+    </section>
+
   </main>
 
   <script>
+    const COLOR_GUIDE = {
+      BLK: { name: "Black", hex: "#111827" },
+      ASPH: { name: "Asphalt", hex: "#4B5563" },
+      BLSTM: { name: "Blue Storm", hex: "#607D8B" },
+      WHT: { name: "White", hex: "#F8FAFC" },
+      CRED: { name: "Canvas Red", hex: "#B91C1C" },
+      TROY: { name: "True Royal", hex: "#0759B8" },
+      PEP: { name: "Pepper", hex: "#3F3F46" },
+      GRAN: { name: "Granite", hex: "#737373" },
+      RED: { name: "Red", hex: "#DC2626" },
+      MYSBLU: { name: "Mystic Blue", hex: "#6281B7" },
+      CHAMB: { name: "Chambray", hex: "#AFC9DC", unconfirmed: true },
+      HMTL: { name: "Heavy Metal", hex: "#3F3F46" },
+      HGR: { name: "Heather Grey", hex: "#B8BDC4" },
+      ROY: { name: "Royal", hex: "#1746A2" },
+      CHTR: { name: "Charcoal Heather", hex: "#4A4A4A" },
+      CARD: { name: "Cardinal", hex: "#8F1426" },
+      SNDSHL: { name: "Sand Shell", hex: "#D7C6AD", unconfirmed: true },
+      STGRY: { name: "Steel Grey", hex: "#62676D" },
+      AWHT: { name: "Arctic White", hex: "#FFFFFF" },
+      FRED: { name: "Fire Red", hex: "#D71920" },
+      RBLU: { name: "Royal Blue", hex: "#214E9F" }
+    };
+    const BETTER_MODELS = ["3001", "3501", "JHA030", "JHA001", "3739"];
+    const BEST_MODELS = ["1717", "3601", "LS14004", "LS14001", "9602"];
+    const getCategory = id => BETTER_MODELS.includes(id) ? "Better" : "Best";
+
     // --- COMPLETE MARCO FINE ARTS CATALOG WITH TMM PROGRAM COLORS ---
     const MFA_CATALOG = [
       {
@@ -221,7 +313,7 @@
       },
       {
         id: "3601",
-        name: "Cotton Long Sleeve T-Shirt",
+        name: "Unisex Cotton Long Sleeve T-Shirt",
         mfr: "Next Level",
         sizes: ["XS", "S", "M", "L", "XL", "2XL", "3XL"],
         pricing: {
@@ -300,12 +392,17 @@
 
     let currentHits = 2; // Default 2 hits
     let masterData = [];
+    let editingOriginalBrand = null;
+    let inactivePanelOpen = false;
 
     // Initialize UI
     window.onload = () => {
       const savedUrl = localStorage.getItem("tmm_sheet_url");
       if (savedUrl) document.getElementById("sheetUrl").value = savedUrl;
+      validatePricingIntegrity();
       renderGarmentSelectors();
+      renderHelpContent();
+      applyAssortmentPreset();
       loadLocalBrands();
     };
 
@@ -316,16 +413,17 @@
     }
 
     function switchTab(tabId) {
-      ['tab-create', 'tab-tiles', 'tab-master'].forEach(id => document.getElementById(id).classList.add('hidden'));
-      ['btn-create', 'btn-tiles', 'btn-master'].forEach(id => {
+      ['tab-create', 'tab-tiles', 'tab-master', 'tab-help'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['btn-create', 'btn-tiles', 'btn-master', 'btn-help'].forEach(id => {
         document.getElementById(id).className = "py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200";
       });
       document.getElementById(tabId).classList.remove('hidden');
-      const activeBtn = tabId === 'tab-create' ? 'btn-create' : tabId === 'tab-tiles' ? 'btn-tiles' : 'btn-master';
+      const activeBtn = tabId === 'tab-create' ? 'btn-create' : tabId === 'tab-tiles' ? 'btn-tiles' : tabId === 'tab-master' ? 'btn-master' : 'btn-help';
       document.getElementById(activeBtn).className = "py-3 border-b-2 border-amber-500 text-amber-400";
     }
 
     function autoGenerateCode() {
+      if (editingOriginalBrand) return;
       const name = document.getElementById("brandName").value.trim();
       if (!name) return;
       const code = name.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 4);
@@ -333,28 +431,103 @@
       renderGeneratedMatrix();
     }
 
+    function getBrandMeta() {
+      try { return JSON.parse(localStorage.getItem("tmm_brand_meta") || "{}"); }
+      catch (e) { return {}; }
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      })[character]);
+    }
+
+    function toggleSkuGroup(groupId) {
+      const row = document.getElementById(groupId);
+      const icon = document.getElementById(groupId + "-icon");
+      if (!row) return;
+      const opening = row.classList.contains("hidden");
+      row.classList.toggle("hidden", !opening);
+      if (icon) icon.className = "fa-solid " + (opening ? "fa-chevron-up" : "fa-chevron-down") + " text-slate-400";
+    }
+
+    function renderGroupedRows(items, targetId, includeBrand) {
+      const groups = {};
+      items.forEach(item => {
+        const key = (includeBrand ? item.brand + "|" : "") + item.model;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+      });
+      const target = document.getElementById(targetId);
+      target.innerHTML = Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])).map(([key, rows], index) => {
+        const first = rows[0];
+        const groupId = targetId + "-group-" + index;
+        const label = (includeBrand ? escapeHtml(first.brand) + " - " : "") + escapeHtml(first.product) + " - " + escapeHtml(first.model);
+        const tierClass = first.category === "Better" ? "text-amber-300" : "text-sky-300";
+        const details = rows.map(item =>
+          '<tr class="border-t border-slate-800"><td class="p-2 text-amber-400 font-bold">' + escapeHtml(item.sku) + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2">' + escapeHtml(item.hits) + ' Hit</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
+        ).join("");
+        return '<tr class="bg-slate-950/70 hover:bg-slate-700 cursor-pointer" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span><p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></div></td></tr>' +
+          '<tr id="' + groupId + '" class="hidden"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-3 bg-slate-900"><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-slate-500 uppercase"><tr><th class="p-2">SKU</th><th class="p-2">Size</th><th class="p-2">Color</th><th class="p-2">Hits</th><th class="p-2">MFA Cost</th><th class="p-2">MSRP</th></tr></thead><tbody>' + details + '</tbody></table></div></td></tr>';
+      }).join("");
+      if (!items.length) target.innerHTML = '<tr><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-6 text-center text-slate-500 italic">No matching SKUs.</td></tr>';
+    }
+
+    function setBrandMeta(meta) {
+      localStorage.setItem("tmm_brand_meta", JSON.stringify(meta));
+    }
+
+    function applyAssortmentPreset() {
+      const preset = document.getElementById("assortmentPreset").value;
+      if (preset === "Custom") return renderGeneratedMatrix();
+      MFA_CATALOG.forEach(g => {
+        const checkbox = document.getElementById("chk-" + g.id);
+        if (checkbox) checkbox.checked = getCategory(g.id) === preset;
+      });
+      renderGeneratedMatrix();
+    }
+
+    function manualGarmentChange() {
+      document.getElementById("assortmentPreset").value = "Custom";
+      renderGeneratedMatrix();
+    }
+
     function setGlobalHits(hits) {
       currentHits = hits;
       document.getElementById("btn-hit-1").className = hits === 1 ? "bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs" : "bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700";
       document.getElementById("btn-hit-2").className = hits === 2 ? "bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs" : "bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700";
+      MFA_CATALOG.forEach(g => {
+        const input = document.getElementById("hits-" + g.id);
+        if (input) input.value = String(hits);
+      });
       renderGeneratedMatrix();
     }
 
     function renderGarmentSelectors() {
       const container = document.getElementById("garmentList");
       container.innerHTML = MFA_CATALOG.map((g) => `
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div class="flex items-center gap-2">
-            <input type="checkbox" id="chk-${g.id}" checked class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0" onchange="renderGeneratedMatrix()" />
-            <label for="chk-${g.id}" class="font-semibold text-slate-200">${g.mfr} ${g.id} <span class="text-slate-400 font-normal">(${g.name})</span></label>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3 text-xs">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" id="chk-${g.id}" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0" onchange="manualGarmentChange()" />
+              <label for="chk-${g.id}" class="font-semibold text-slate-200">${g.mfr} ${g.id} <span class="text-slate-400 font-normal">(${g.name})</span></label>
+            </div>
+            <span class="text-[10px] uppercase tracking-wide font-bold border rounded-full px-2 py-1 ${getCategory(g.id) === 'Better' ? 'bg-amber-950 text-amber-300 border-amber-800' : 'bg-sky-950 text-sky-300 border-sky-800'}">${getCategory(g.id)}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-slate-400 font-mono text-[11px]">Colors:</span>
-            <input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="bg-slate-900 border border-slate-700 px-2 py-1 rounded text-slate-200 uppercase w-56 text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" />
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_110px_140px] gap-3">
+            <div><label class="text-[11px] text-slate-400">Color codes</label><input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-200 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" /></div>
+            <div><label class="text-[11px] text-slate-400">Hits</label><select id="hits-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px]" onchange="renderGeneratedMatrix()"><option value="1">1 - Front</option><option value="2" selected>2 - Back + Pocket</option></select></div>
+            <div><label class="text-[11px] text-slate-400">Manual MSRP</label><div class="relative"><span class="absolute left-3 top-2 text-slate-500">$</span><input type="number" id="msrp-${g.id}" min="0" step="0.01" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 pl-7 pr-2 py-2 rounded text-slate-100 text-[11px] focus:outline-none focus:border-amber-500" oninput="renderGeneratedMatrix()" /></div></div>
           </div>
+          <div class="flex flex-wrap gap-1">${g.defaultColors.map(code => colorChip(code)).join('')}</div>
         </div>
       `).join('');
       renderGeneratedMatrix();
+    }
+
+    function colorChip(code) {
+      const color = COLOR_GUIDE[code] || { name: code, hex: "#64748B" };
+      return '<span class="inline-flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-full px-2 py-1 text-[10px] text-slate-300"><span class="color-swatch w-3 h-3 rounded-full border border-slate-600" style="background:' + color.hex + '"></span>' + code + '</span>';
     }
 
     function selectAllGarments(checked) {
@@ -362,6 +535,7 @@
         const chk = document.getElementById(`chk-${g.id}`);
         if (chk) chk.checked = checked;
       });
+      document.getElementById("assortmentPreset").value = "Custom";
       renderGeneratedMatrix();
     }
 
@@ -370,8 +544,17 @@
       return tier[size] || tier.standard;
     }
 
+    function validatePricingIntegrity() {
+      const tee = MFA_CATALOG.find(g => g.id === "3001");
+      const oneHit = getItemCost(tee, "S", 1);
+      const twoHits = getItemCost(tee, "S", 2);
+      if (oneHit !== 12.11 || twoHits !== 15.62) {
+        throw new Error("Pricing integrity check failed: 3001 Small must be $12.11 for 1 hit and $15.62 for 2 hits.");
+      }
+    }
+
     function generateCurrentSKUs() {
-      const brandCode = (document.getElementById("brandCode").value.trim() || "BRAND").toUpperCase();
+      const brandCode = (document.getElementById("brandCode").value.trim() || "BRAND").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const brandName = document.getElementById("brandName").value.trim() || "Unassigned Brand";
       let rows = [];
 
@@ -380,23 +563,27 @@
         if (!isChecked) return;
 
         const colorInput = document.getElementById(`colors-${g.id}`).value;
-        const colors = colorInput.split(',').map(c => c.trim().toUpperCase()).filter(c => c.length > 0);
+        const colors = [...new Set(colorInput.split(',').map(c => c.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")).filter(c => c.length > 0))];
+        const garmentHits = Number(document.getElementById("hits-" + g.id).value || currentHits);
+        const msrpInput = document.getElementById("msrp-" + g.id).value;
+        const manualMsrp = msrpInput === "" ? "" : Number(msrpInput).toFixed(2);
 
         g.sizes.forEach(size => {
           colors.forEach(color => {
-            const cost = getItemCost(g, size, currentHits);
-            const sku = `${brandCode}-${g.id}-${size}-${color}-${currentHits}`;
+            const cost = getItemCost(g, size, garmentHits);
+            const sku = `${brandCode}-${g.id}-${size}-${color}-${garmentHits}`;
             rows.push({
               brand: brandName,
               brandCode: brandCode,
+              category: getCategory(g.id),
               sku: sku,
               product: g.name,
               model: `${g.mfr} ${g.id}`,
               size: size,
               color: color,
-              hits: currentHits,
+              hits: garmentHits,
               cost: cost.toFixed(2),
-              msrp: (cost * 2.2).toFixed(2)
+              msrp: manualMsrp
             });
           });
         });
@@ -412,78 +599,326 @@
       tbody.innerHTML = skus.slice(0, 100).map(s => `
         <tr class="hover:bg-slate-700/40">
           <td class="p-3 text-amber-400 font-bold">${s.sku}</td>
+          <td class="p-3 ${s.category === 'Better' ? 'text-amber-300' : 'text-sky-300'}">${s.category}</td>
           <td class="p-3 text-slate-300 font-sans">${s.product}</td>
           <td class="p-3">${s.size}</td>
           <td class="p-3">${s.color}</td>
           <td class="p-3">${s.hits} Hit</td>
           <td class="p-3 text-emerald-400">$${s.cost}</td>
-          <td class="p-3 text-slate-300">$${s.msrp}</td>
+          <td class="p-3 ${s.msrp ? 'text-slate-300' : 'text-rose-300'}">${s.msrp ? '$' + s.msrp : 'MSRP not set'}</td>
         </tr>
       `).join('');
     }
 
+    function getCurrentBrandConfig(brandName, skus, active) {
+      const products = {};
+      MFA_CATALOG.forEach(g => {
+        const rawMsrp = document.getElementById("msrp-" + g.id).value;
+        products[g.id] = {
+          selected: document.getElementById("chk-" + g.id).checked,
+          colors: [...new Set(document.getElementById("colors-" + g.id).value.split(",").map(value => value.trim().toUpperCase()).filter(Boolean))],
+          hits: Number(document.getElementById("hits-" + g.id).value),
+          msrp: rawMsrp === "" ? null : Number(rawMsrp)
+        };
+      });
+      return {
+        name: brandName,
+        code: document.getElementById("brandCode").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""),
+        assortment: document.getElementById("assortmentPreset").value,
+        active: active !== false,
+        products: products,
+        skus: skus
+      };
+    }
+
+    function importMsrpCsv(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let updated = 0;
+        String(reader.result || "").split(/\r?\n/).slice(1).forEach(line => {
+          const cells = line.split(",").map(value => value.trim().replace(/^"|"$/g, ""));
+          const model = (cells[0] || "").toUpperCase();
+          const msrp = Number((cells[1] || "").replace(/[$,]/g, ""));
+          const input = document.getElementById("msrp-" + model);
+          if (input && Number.isFinite(msrp) && msrp >= 0) {
+            input.value = msrp.toFixed(2);
+            updated++;
+          }
+        });
+        renderGeneratedMatrix();
+        alert("Imported MSRP for " + updated + " garment" + (updated === 1 ? "." : "s."));
+        event.target.value = "";
+      };
+      reader.readAsText(file);
+    }
+
+    function downloadMsrpTemplate() {
+      const csv = "model,msrp\n" + MFA_CATALOG.map(g => g.id + ",").join("\n");
+      downloadCsv("tmm-msrp-template.csv", csv);
+    }
+
+    function renderHelpContent() {
+      const row = g => '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3"><span class="font-bold">' + g.mfr + " " + g.id + '</span><p class="text-xs text-slate-400">' + g.name + '</p></div>';
+      document.getElementById("betterGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Better").map(row).join("");
+      document.getElementById("bestGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Best").map(row).join("");
+      document.getElementById("colorGuide").innerHTML = Object.entries(COLOR_GUIDE).map(([code, color]) =>
+        '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3 flex items-center gap-3"><span class="color-swatch w-9 h-9 rounded-lg border border-slate-600 shrink-0" style="background:' + color.hex + '"></span><div><div class="font-mono font-bold text-amber-300">' + code + '</div><div class="text-xs text-slate-400">' + color.name + (color.unconfirmed ? ' <span class="text-rose-300">(confirm with Kayla)</span>' : "") + '</div></div></div>'
+      ).join("");
+    }
+
+    function downloadCsv(filename, csv) {
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function csvCell(value) {
+      const text = String(value == null ? "" : value);
+      return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+    }
+
+    function buildShopifyCsv(items) {
+      if (!items.length) throw new Error("There are no active SKUs to export.");
+      const missing = items.filter(item => !item.msrp);
+      if (missing.length) throw new Error("Set MSRP for every exported variant before creating a Shopify file.");
+      const headers = [
+        "Handle","Title","Body (HTML)","Vendor","Type","Tags","Published",
+        "Option1 Name","Option1 Value","Option2 Name","Option2 Value","Option3 Name","Option3 Value",
+        "Variant SKU","Variant Grams","Variant Inventory Tracker","Variant Inventory Qty",
+        "Variant Inventory Policy","Variant Fulfillment Service","Variant Price","Variant Compare-at Price",
+        "Variant Requires Shipping","Variant Taxable","Variant Barcode","Image Src","Image Alt Text","Cost per item"
+      ];
+      const productGroups = {};
+      items.forEach(item => {
+        const key = item.brand + "|" + item.model + "|" + item.hits;
+        if (!productGroups[key]) productGroups[key] = [];
+        productGroups[key].push(item);
+      });
+      const rows = [];
+      Object.values(productGroups).forEach(group => {
+        group.sort((a, b) => (a.color + a.size).localeCompare(b.color + b.size));
+        group.forEach((item, index) => {
+          const modelId = String(item.model).split(/\s+/).pop();
+          const handle = (item.brandCode + "-" + modelId + "-" + item.hits + "-hit").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+          const colorName = COLOR_GUIDE[item.color] ? COLOR_GUIDE[item.color].name : item.color;
+          rows.push([
+            handle,
+            index === 0 ? item.brand + " - " + item.product + " (" + item.hits + " Hit)" : "",
+            index === 0 ? "TMM " + item.category + " assortment with " + item.hits + "-hit print placement." : "",
+            index === 0 ? item.brand : "",
+            index === 0 ? item.product : "",
+            index === 0 ? "TMM," + item.category + ",Model-" + modelId + "," + item.hits + "-Hit" : "",
+            index === 0 ? "FALSE" : "",
+            "Size", item.size, "Color", colorName, "", "",
+            item.sku, "", "", "", "deny", "manual", item.msrp, "", "TRUE", "TRUE", "", "", "", item.cost
+          ]);
+        });
+      });
+      return [headers].concat(rows).map(row => row.map(csvCell).join(",")).join("\n");
+    }
+
+    function exportBrandShopify(brandName) {
+      try {
+        const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+        const csv = buildShopifyCsv(brands[brandName] || []);
+        downloadCsv(brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-shopify-products.csv", csv);
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    function exportMasterShopify() {
+      try {
+        const csv = buildShopifyCsv(masterData);
+        downloadCsv("tmm-active-catalog-shopify-products.csv", csv);
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
     // --- SAVE TO GOOGLE SHEET & LOCAL STORAGE ---
+    async function postToSheet(payload) {
+      const sheetUrl = document.getElementById("sheetUrl").value.trim();
+      if (!sheetUrl) return null;
+      const response = await fetch(sheetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok || result.status !== "success") throw new Error(result.message || result.error || "Google Sheets did not confirm the request.");
+      return result;
+    }
+
     async function saveBrandData() {
       const brandName = document.getElementById("brandName").value.trim();
-      const sheetUrl = document.getElementById("sheetUrl").value.trim();
-      if (!brandName) return alert("Please specify a Brand Name!");
-
+      if (!brandName) return alert("Please specify a Brand Name.");
       const skus = generateCurrentSKUs();
-      if (skus.length === 0) return alert("No SKUs generated to save.");
+      if (!skus.length) return alert("Select at least one garment and one color.");
+      const missing = MFA_CATALOG.filter(g => document.getElementById("chk-" + g.id).checked && document.getElementById("msrp-" + g.id).value === "");
+      if (missing.length) return alert("Manual MSRP is required for: " + missing.map(g => g.id + " " + g.name).join(", ") + ".");
 
-      // Save locally
-      let brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const meta = getBrandMeta();
+      const previousName = editingOriginalBrand;
+      const active = previousName && meta[previousName] ? meta[previousName].active !== false : true;
+      if (previousName && previousName !== brandName) {
+        delete brands[previousName];
+        delete meta[previousName];
+      }
       brands[brandName] = skus;
+      const config = getCurrentBrandConfig(brandName, skus, active);
+      meta[brandName] = config;
       localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
+      setBrandMeta(meta);
       loadLocalBrands();
 
-      if (!sheetUrl) {
-        alert("Saved to local browser portfolio! To push live to your spreadsheet, connect your Apps Script URL.");
-        return;
-      }
-
       try {
-        const res = await fetch(sheetUrl, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "saveBrand", brandName: brandName, skus: skus })
-        });
-        alert(`Successfully synced ${skus.length} SKUs for ${brandName} to Google Sheets tab!`);
-      } catch (e) {
-        console.error(e);
-        alert("Brand saved locally, but Google Sheet webhook encountered an error.");
+        const result = await postToSheet({ action: "saveBrand", brandName: brandName, previousBrandName: previousName, catalogStatus: active ? "active" : "inactive", catalog: config, skus: skus });
+        alert(result ? "Saved " + skus.length + " SKUs locally and to Google Sheets." : "Saved locally. Connect the Google Sheet to sync this catalog.");
+        cancelEdit(false);
+        switchTab("tab-tiles");
+      } catch (error) {
+        console.error(error);
+        alert("Saved locally, but Google Sheets did not confirm the update: " + error.message);
       }
     }
 
     // --- TAB 2 & 3 RENDERING ---
     function loadLocalBrands() {
       const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
-      const grid = document.getElementById("brandGrid");
-      grid.innerHTML = "";
+      const meta = getBrandMeta();
+      Object.keys(brands).forEach(name => {
+        if (!meta[name]) meta[name] = { name: name, active: true, assortment: "Custom", skus: brands[name] };
+      });
+      setBrandMeta(meta);
+      const activeNames = Object.keys(brands).filter(name => meta[name].active !== false).sort();
+      const inactiveNames = Object.keys(brands).filter(name => meta[name].active === false).sort();
+      renderBrandCards("brandGrid", activeNames, brands, meta, false);
+      renderBrandCards("inactiveBrandGrid", inactiveNames, brands, meta, true);
+      document.getElementById("inactiveCount").innerText = inactiveNames.length;
+      refreshMasterMatrix();
+    }
 
-      let brandNames = Object.keys(brands);
-      if (brandNames.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-slate-500 text-sm italic">No brands created yet. Build one in Tab 1!</div>`;
+    function renderBrandCards(containerId, names, brands, meta, inactive) {
+      const container = document.getElementById(containerId);
+      if (!names.length) {
+        container.innerHTML = '<div class="col-span-full text-slate-500 text-sm italic">' + (inactive ? "No deactivated brands." : "No active brands yet. Build one in Tab 1.") + '</div>';
         return;
       }
-
-      brandNames.forEach(b => {
-        const count = brands[b].length;
-        grid.innerHTML += `
-          <div onclick="showBrandDetail('${b}')" class="bg-slate-800 hover:border-amber-500 cursor-pointer p-5 rounded-xl border border-slate-700 transition flex flex-col justify-between h-40">
-            <div>
-              <h4 class="font-bold text-lg text-slate-100">${b}</h4>
-              <p class="text-xs text-slate-400 mt-1">${count} Active SKUs</p>
-            </div>
-            <div class="flex justify-between items-center text-xs text-amber-400 font-semibold">
-              <span>View Catalog</span>
-              <i class="fa-solid fa-arrow-right"></i>
-            </div>
-          </div>
-        `;
+      container.innerHTML = names.map(name => {
+        const rows = brands[name] || [];
+        const better = rows.filter(item => item.category === "Better").length;
+        const best = rows.filter(item => item.category === "Best").length;
+        const safeName = escapeHtml(name);
+        return '<article class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">' +
+          '<div><div class="flex justify-between gap-2"><h4 class="font-bold text-lg">' + safeName + '</h4><span class="text-[10px] uppercase px-2 py-1 rounded-full ' + (inactive ? "bg-slate-950 text-slate-400" : "bg-emerald-950 text-emerald-300") + '">' + (inactive ? "Inactive" : "Active") + '</span></div>' +
+          '<p class="text-xs text-slate-400 mt-1">' + rows.length + ' SKUs - ' + escapeHtml(meta[name].assortment || "Custom") + '</p>' +
+          '<div class="flex gap-2 mt-3 text-[10px]"><span class="bg-amber-950 text-amber-300 rounded-full px-2 py-1">Better ' + better + '</span><span class="bg-sky-950 text-sky-300 rounded-full px-2 py-1">Best ' + best + '</span></div></div>' +
+          '<div class="grid grid-cols-2 gap-2">' +
+          (inactive ? '<button data-action="reactivate" data-brand="' + safeName + '" class="bg-emerald-700 hover:bg-emerald-600 rounded-lg px-2 py-2 text-xs font-bold">Reactivate</button>' :
+            '<button data-action="view" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">View</button><button data-action="edit" data-brand="' + safeName + '" class="bg-sky-700 hover:bg-sky-600 rounded-lg px-2 py-2 text-xs font-bold">Edit</button><button data-action="deactivate" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">Deactivate</button>') +
+          '<button data-action="export" data-brand="' + safeName + '" class="bg-emerald-800 hover:bg-emerald-700 rounded-lg px-2 py-2 text-xs font-bold"><i class="fa-brands fa-shopify mr-1"></i>Export</button>' +
+          '<button data-action="delete" data-brand="' + safeName + '" class="col-span-2 bg-rose-950 hover:bg-rose-900 text-rose-200 rounded-lg px-2 py-2 text-xs font-bold">Delete Permanently</button>' +
+          '</div></article>';
+      }).join("");
+      container.querySelectorAll("[data-action]").forEach(button => {
+        button.addEventListener("click", () => {
+          const name = button.dataset.brand;
+          if (button.dataset.action === "view") showBrandDetail(name);
+          if (button.dataset.action === "edit") editBrand(name);
+          if (button.dataset.action === "deactivate") setBrandActive(name, false);
+          if (button.dataset.action === "reactivate") setBrandActive(name, true);
+          if (button.dataset.action === "export") exportBrandShopify(name);
+          if (button.dataset.action === "delete") deleteBrand(name);
+        });
       });
+    }
 
-      refreshMasterMatrix();
+    function editBrand(brandName) {
+      const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const meta = getBrandMeta();
+      const rows = brands[brandName] || [];
+      const config = meta[brandName] || {};
+      editingOriginalBrand = brandName;
+      document.getElementById("brandName").value = brandName;
+      document.getElementById("brandCode").value = config.code || rows[0]?.brandCode || "";
+      document.getElementById("assortmentPreset").value = config.assortment || "Custom";
+      MFA_CATALOG.forEach(g => {
+        const productRows = rows.filter(item => String(item.model || "").endsWith(" " + g.id));
+        const saved = config.products && config.products[g.id] ? config.products[g.id] : {};
+        document.getElementById("chk-" + g.id).checked = saved.selected != null ? saved.selected : productRows.length > 0;
+        document.getElementById("colors-" + g.id).value = (saved.colors && saved.colors.length ? saved.colors : [...new Set(productRows.map(item => item.color))]).join(", ") || g.defaultColors.join(", ");
+        document.getElementById("hits-" + g.id).value = String(saved.hits || productRows[0]?.hits || 2);
+        document.getElementById("msrp-" + g.id).value = saved.msrp != null ? saved.msrp : productRows[0]?.msrp || "";
+      });
+      document.getElementById("editBanner").classList.remove("hidden");
+      document.getElementById("editBannerText").innerText = "Editing " + brandName + ". Saving updates its existing Google Sheet tab.";
+      switchTab("tab-create");
+      renderGeneratedMatrix();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function cancelEdit(clearForm) {
+      editingOriginalBrand = null;
+      document.getElementById("editBanner").classList.add("hidden");
+      if (clearForm === false) return;
+      document.getElementById("brandName").value = "";
+      document.getElementById("brandCode").value = "";
+      document.getElementById("assortmentPreset").value = "Better";
+      MFA_CATALOG.forEach(g => {
+        document.getElementById("colors-" + g.id).value = g.defaultColors.join(", ");
+        document.getElementById("hits-" + g.id).value = "2";
+        document.getElementById("msrp-" + g.id).value = "";
+      });
+      applyAssortmentPreset();
+    }
+
+    async function setBrandActive(brandName, active) {
+      const meta = getBrandMeta();
+      if (!meta[brandName]) return;
+      const previous = meta[brandName].active !== false;
+      meta[brandName].active = active;
+      setBrandMeta(meta);
+      loadLocalBrands();
+      try {
+        await postToSheet({ action: "setBrandStatus", brandName: brandName, status: active ? "active" : "inactive" });
+      } catch (error) {
+        meta[brandName].active = previous;
+        setBrandMeta(meta);
+        loadLocalBrands();
+        alert("The status change was rolled back because Google Sheets did not confirm it: " + error.message);
+      }
+    }
+
+    async function deleteBrand(brandName) {
+      if (!confirm("Permanently delete " + brandName + "? This cannot be undone.")) return;
+      const sheetUrl = document.getElementById("sheetUrl").value.trim();
+      if (sheetUrl) {
+        try { await postToSheet({ action: "deleteBrand", brandName: brandName }); }
+        catch (error) { return alert("Nothing was deleted because Google Sheets did not confirm it: " + error.message); }
+      }
+      const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const meta = getBrandMeta();
+      delete brands[brandName];
+      delete meta[brandName];
+      localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
+      setBrandMeta(meta);
+      document.getElementById("brandDetailCard").classList.add("hidden");
+      loadLocalBrands();
+    }
+
+    function toggleInactivePanel() {
+      inactivePanelOpen = !inactivePanelOpen;
+      document.getElementById("inactivePanel").classList.toggle("hidden", !inactivePanelOpen);
+      document.getElementById("inactiveChevron").className = "fa-solid " + (inactivePanelOpen ? "fa-chevron-up" : "fa-chevron-down") + " text-slate-400";
     }
 
     function showBrandDetail(brandName) {
@@ -494,17 +929,7 @@
       document.getElementById("detailBrandName").innerText = brandName;
       document.getElementById("detailBrandCount").innerText = `${list.length} Total SKUs`;
 
-      document.getElementById("brandDetailTable").innerHTML = list.map(item => `
-        <tr class="hover:bg-slate-700/30">
-          <td class="p-3 text-amber-400 font-bold">${item.sku}</td>
-          <td class="p-3 text-slate-300 font-sans">${item.product}</td>
-          <td class="p-3">${item.size}</td>
-          <td class="p-3">${item.color}</td>
-          <td class="p-3">${item.hits} Hit</td>
-          <td class="p-3 text-emerald-400">$${item.cost}</td>
-          <td class="p-3 text-slate-300">$${item.msrp}</td>
-        </tr>
-      `).join('');
+      renderGroupedRows(list, "brandDetailTable", false);
       card.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -516,10 +941,22 @@
         const res = await fetch(`${sheetUrl}?action=fetchAll`);
         const result = await res.json();
         if (result.status === "success") {
-          masterData = result.items;
-          populateFilters(result.items);
-          renderMasterTable(result.items);
-          alert(`Fetched ${result.items.length} total SKUs from Google Sheet!`);
+          if (Array.isArray(result.catalogs) && result.catalogs.length) {
+            const brands = {};
+            const meta = {};
+            result.catalogs.forEach(catalog => {
+              if (!catalog || !catalog.name) return;
+              brands[catalog.name] = catalog.skus || [];
+              meta[catalog.name] = catalog;
+            });
+            localStorage.setItem("tmm_local_brands", JSON.stringify(brands));
+            setBrandMeta(meta);
+            loadLocalBrands();
+          }
+          masterData = (result.items || []).filter(item => item.status !== "inactive" && item.active !== false);
+          populateFilters(masterData);
+          renderMasterTable(masterData);
+          alert("Synced " + masterData.length + " active SKUs and " + (result.catalogs?.length || 0) + " brand catalogs from Google Sheets.");
         }
       } catch (e) {
         console.error(e);
@@ -529,9 +966,10 @@
 
     function refreshMasterMatrix() {
       const brands = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
+      const meta = getBrandMeta();
       let allItems = [];
       Object.keys(brands).forEach(b => {
-        allItems = allItems.concat(brands[b]);
+        if (!meta[b] || meta[b].active !== false) allItems = allItems.concat(brands[b]);
       });
       masterData = allItems;
       populateFilters(allItems);
@@ -551,15 +989,17 @@
     function filterMasterMatrix() {
       const q = document.getElementById("searchMaster").value.toLowerCase();
       const fBrand = document.getElementById("filterBrand").value;
+      const fCategory = document.getElementById("filterCategory").value;
       const fSize = document.getElementById("filterSize").value;
       const fColor = document.getElementById("filterColor").value;
 
       const filtered = masterData.filter(i => {
         const matchQ = !q || i.sku.toLowerCase().includes(q) || i.product.toLowerCase().includes(q) || i.brand.toLowerCase().includes(q);
         const matchB = !fBrand || i.brand === fBrand;
+        const matchCategory = !fCategory || i.category === fCategory;
         const matchS = !fSize || i.size === fSize;
         const matchC = !fColor || i.color === fColor;
-        return matchQ && matchB && matchS && matchC;
+        return matchQ && matchB && matchCategory && matchS && matchC;
       });
 
       renderMasterTable(filtered);
@@ -567,19 +1007,7 @@
 
     function renderMasterTable(items) {
       document.getElementById("masterRowCount").innerText = `Showing ${items.length} rows`;
-      document.getElementById("masterTableBody").innerHTML = items.map(s => `
-        <tr class="hover:bg-slate-700/40">
-          <td class="p-3 text-slate-300 font-sans font-semibold">${s.brand}</td>
-          <td class="p-3 text-amber-400 font-bold">${s.sku}</td>
-          <td class="p-3 text-slate-300 font-sans">${s.product}</td>
-          <td class="p-3 text-slate-400">${s.model}</td>
-          <td class="p-3">${s.size}</td>
-          <td class="p-3">${s.color}</td>
-          <td class="p-3">${s.hits} Hit</td>
-          <td class="p-3 text-emerald-400">$${s.cost}</td>
-          <td class="p-3 text-slate-300">$${s.msrp || (s.cost * 2.2).toFixed(2)}</td>
-        </tr>
-      `).join('');
+      renderGroupedRows(items, "masterTableBody", true);
     }
   </script>
 </body>
