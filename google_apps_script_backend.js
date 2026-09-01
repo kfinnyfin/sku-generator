@@ -34,6 +34,7 @@ function handleRequest(e) {
 
     if (data.action === "fetchAll") return fetchAllCatalogs();
     if (data.action === "saveBrand") return saveBrandCatalog(data);
+    if (data.action === "saveStandardPrices") return saveStandardPrices(data);
     if (data.action === "setBrandStatus") return setBrandStatus(data);
     if (data.action === "deleteBrand") return deleteBrandCatalog(data);
 
@@ -62,6 +63,54 @@ function getIndexSheet() {
     sheet.hideSheet();
   }
   return sheet;
+}
+
+function getSettingsSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("_Catalog_Settings");
+  if (!sheet) {
+    sheet = ss.insertSheet("_Catalog_Settings");
+    sheet.appendRow(["Setting", "Value JSON", "Updated At"]);
+    sheet.getRange(1, 1, 1, 3).setBackground("#1E293B").setFontColor("#FFFFFF").setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    sheet.hideSheet();
+  }
+  return sheet;
+}
+
+function findSettingRow(sheet, settingName) {
+  if (sheet.getLastRow() < 2) return 0;
+  var names = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  for (var index = 0; index < names.length; index++) {
+    if (String(names[index][0]) === String(settingName)) return index + 2;
+  }
+  return 0;
+}
+
+function readStandardPrices() {
+  var sheet = getSettingsSheet();
+  var row = findSettingRow(sheet, "standard_prices");
+  if (!row) return {};
+  try { return JSON.parse(sheet.getRange(row, 2).getValue() || "{}"); }
+  catch (error) { return {}; }
+}
+
+function saveStandardPrices(data) {
+  var allowedModels = ["3001", "3501", "JHA030", "JHA001", "3739", "1717", "3601", "LS14004", "LS14001", "9602"];
+  var submitted = data.standardPrices || {};
+  var prices = {};
+  allowedModels.forEach(function(model) {
+    var value = Number(submitted[model]);
+    if (!isFinite(value) || value < 0) throw new Error("Invalid Standard Price for model " + model + ".");
+    prices[model] = Math.round(value * 100) / 100;
+  });
+
+  var sheet = getSettingsSheet();
+  var row = findSettingRow(sheet, "standard_prices");
+  var values = [["standard_prices", JSON.stringify(prices), new Date()]];
+  if (row) sheet.getRange(row, 1, 1, 3).setValues(values);
+  else sheet.getRange(sheet.getLastRow() + 1, 1, 1, 3).setValues(values);
+  return jsonResponse({ status: "success", standardPrices: prices });
 }
 
 function findIndexRow(sheet, brandName) {
@@ -233,5 +282,5 @@ function fetchAllCatalogs() {
     }
   });
 
-  return jsonResponse({ status: "success", items: items, catalogs: catalogs });
+  return jsonResponse({ status: "success", items: items, catalogs: catalogs, standardPrices: readStandardPrices() });
 }
