@@ -35,6 +35,7 @@ function handleRequest(e) {
     if (data.action === "fetchAll") return fetchAllCatalogs();
     if (data.action === "saveBrand") return saveBrandCatalog(data);
     if (data.action === "saveStandardPrices") return saveStandardPrices(data);
+    if (data.action === "savePrintMethods") return savePrintMethods(data);
     if (data.action === "setBrandStatus") return setBrandStatus(data);
     if (data.action === "deleteBrand") return deleteBrandCatalog(data);
 
@@ -113,6 +114,32 @@ function saveStandardPrices(data) {
   return jsonResponse({ status: "success", standardPrices: prices });
 }
 
+function readPrintMethods() {
+  var sheet = getSettingsSheet();
+  var row = findSettingRow(sheet, "print_methods");
+  if (!row) return {};
+  try { return JSON.parse(sheet.getRange(row, 2).getValue() || "{}"); }
+  catch (error) { return {}; }
+}
+
+function savePrintMethods(data) {
+  var allowedModels = ["3001", "3501", "JHA030", "JHA001", "3739", "1717", "3601", "LS14004", "LS14001", "9602"];
+  var submitted = data.printMethods || {};
+  var methods = {};
+  allowedModels.forEach(function(model) {
+    var method = String(submitted[model] || "").toUpperCase();
+    if (method !== "" && method !== "DTG" && method !== "FTG") throw new Error("Invalid Print Method for model " + model + ".");
+    methods[model] = method;
+  });
+
+  var sheet = getSettingsSheet();
+  var row = findSettingRow(sheet, "print_methods");
+  var values = [["print_methods", JSON.stringify(methods), new Date()]];
+  if (row) sheet.getRange(row, 1, 1, 3).setValues(values);
+  else sheet.getRange(sheet.getLastRow() + 1, 1, 1, 3).setValues(values);
+  return jsonResponse({ status: "success", printMethods: methods });
+}
+
 function findIndexRow(sheet, brandName) {
   if (sheet.getLastRow() < 2) return 0;
   var names = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
@@ -181,7 +208,7 @@ function saveBrandCatalog(data) {
   if (!sheet) sheet = ss.insertSheet(sheetName);
   sheet.clear();
 
-  var headers = ["SKU", "Product Name", "Blank Model", "Size", "Color", "Hits", "Cost (MFA)", "MSRP (Manual)", "Program Tier", "Status"];
+  var headers = ["SKU", "Design ID", "Print Location", "Print Method", "Product Name", "Blank Model", "Size", "Color", "Color Code", "Hits", "Cost (MFA)", "MSRP (Manual)", "Program Tier", "Status"];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   sheet.getRange(1, 1, 1, headers.length).setBackground("#1E293B").setFontColor("#FFFFFF").setFontWeight("bold");
   sheet.setFrozenRows(1);
@@ -190,10 +217,14 @@ function saveBrandCatalog(data) {
     var rows = skus.map(function(item) {
       return [
         item.sku,
+        item.designId || "",
+        item.printLocation || "",
+        item.printMethod || "",
         item.product,
         item.model,
         item.size,
         item.color,
+        item.colorCode || "",
         Number(item.hits),
         Number(item.cost),
         item.msrp === "" || item.msrp == null ? "" : Number(item.msrp),
@@ -202,7 +233,7 @@ function saveBrandCatalog(data) {
       ];
     });
     sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-    sheet.getRange(2, 7, rows.length, 2).setNumberFormat("$#,##0.00");
+    sheet.getRange(2, 11, rows.length, 2).setNumberFormat("$#,##0.00");
   }
   sheet.autoResizeColumns(1, headers.length);
 
@@ -230,7 +261,9 @@ function setBrandStatus(data) {
   var sheetName = indexSheet.getRange(row, 2).getValue() || safeSheetName(brandName);
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   if (sheet && sheet.getLastRow() > 1) {
-    sheet.getRange(2, 10, sheet.getLastRow() - 1, 1).setValue(status);
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var statusColumn = headers.indexOf("Status") + 1;
+    if (statusColumn > 0) sheet.getRange(2, statusColumn, sheet.getLastRow() - 1, 1).setValue(status);
   }
   return jsonResponse({ status: "success", brandName: brandName, catalogStatus: status });
 }
@@ -258,29 +291,40 @@ function fetchAllCatalogs() {
     if (sheet.getName().charAt(0) === "_") return;
     var values = sheet.getDataRange().getValues();
     if (values.length < 2) return;
+    var headers = values[0].map(function(value) { return String(value || ""); });
+    var isNewFormat = headers.indexOf("Design ID") >= 0;
+    function cell(row, header, legacyIndex) {
+      var index = headers.indexOf(header);
+      return index >= 0 ? row[index] : row[legacyIndex];
+    }
     var catalog = catalogBySheet[sheet.getName()];
     var brandName = catalog ? catalog.name : sheet.getName();
     for (var rowIndex = 1; rowIndex < values.length; rowIndex++) {
       var row = values[rowIndex];
       if (!row[0]) continue;
-      var status = String(row[9] || (catalog && catalog.active === false ? "inactive" : "active")).toLowerCase();
+      var status = String(cell(row, "Status", 9) || (catalog && catalog.active === false ? "inactive" : "active")).toLowerCase();
       items.push({
         brand: brandName,
         brandCode: catalog ? catalog.code : "",
-        sku: row[0],
-        product: row[1],
-        model: row[2],
-        size: row[3],
-        color: row[4],
-        hits: row[5],
-        cost: row[6],
-        msrp: row[7],
-        category: row[8],
+        sku: cell(row, "SKU", 0),
+        formatVersion: isNewFormat ? 2 : 1,
+        designId: isNewFormat ? cell(row, "Design ID", -1) : "",
+        printLocation: isNewFormat ? cell(row, "Print Location", -1) : "",
+        printMethod: isNewFormat ? cell(row, "Print Method", -1) : "",
+        product: cell(row, "Product Name", 1),
+        model: cell(row, "Blank Model", 2),
+        size: cell(row, "Size", 3),
+        color: cell(row, "Color", 4),
+        colorCode: isNewFormat ? cell(row, "Color Code", -1) : "",
+        hits: cell(row, "Hits", 5),
+        cost: cell(row, "Cost (MFA)", 6),
+        msrp: cell(row, "MSRP (Manual)", 7),
+        category: cell(row, "Program Tier", 8),
         status: status,
         active: status !== "inactive"
       });
     }
   });
 
-  return jsonResponse({ status: "success", items: items, catalogs: catalogs, standardPrices: readStandardPrices() });
+  return jsonResponse({ status: "success", items: items, catalogs: catalogs, standardPrices: readStandardPrices(), printMethods: readPrintMethods() });
 }
