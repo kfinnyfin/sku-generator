@@ -308,8 +308,8 @@
         <p id="printMethodStatus" class="text-xs text-slate-500" aria-live="polite">These defaults prefill new brand forms. Every product can still be overridden inside a brand.</p>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-        <h3 class="font-bold text-lg">Color Code Guide</h3>
-        <p class="text-xs text-slate-400 mt-1 mb-5">Use the short codes while configuring a brand; the generated SKU automatically uses the full uppercase color name.</p>
+        <h3 class="font-bold text-lg">Color Guide</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-5">Colors are shown by their full names throughout the app. Generated SKUs format multi-word colors with underscores automatically.</p>
         <div id="colorGuide" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
       </div>
     </section>
@@ -854,6 +854,22 @@
       });
     }
 
+    function getSelectedColorsForGarment(modelId) {
+      const container = document.getElementById("colors-" + modelId);
+      if (!container) return [];
+      return [...container.querySelectorAll("input[data-color-code]:checked")]
+        .map(input => colorDetails(input.dataset.colorCode));
+    }
+
+    function setGarmentColorSelections(modelId, values) {
+      const container = document.getElementById("colors-" + modelId);
+      if (!container) return;
+      const selectedCodes = new Set((values || []).map(value => colorDetails(value).code).filter(Boolean));
+      container.querySelectorAll("input[data-color-code]").forEach(input => {
+        input.checked = selectedCodes.has(input.dataset.colorCode);
+      });
+    }
+
     function skuColorName(value) {
       return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
     }
@@ -1013,17 +1029,23 @@
             <div><label class="text-[11px] text-slate-400">Print method <span class="text-rose-300">Required</span></label><select id="method-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px] focus:border-violet-500" onchange="renderGeneratedMatrix()"><option value="" ${printMethods[g.id] ? '' : 'selected'}>Select DTG or FTG</option><option value="DTG" ${printMethods[g.id] === 'DTG' ? 'selected' : ''}>DTG</option><option value="FTG" ${printMethods[g.id] === 'FTG' ? 'selected' : ''}>FTG</option></select></div>
             <div><label class="text-[11px] text-slate-400">Manual MSRP</label><div class="relative"><span class="absolute left-3 top-2 text-slate-500">$</span><input type="number" id="msrp-${g.id}" min="0" step="0.01" value="${standardPrices[g.id].toFixed(2)}" class="w-full bg-slate-900 border border-slate-700 pl-7 pr-2 py-2 rounded text-slate-100 text-[11px] focus:outline-none focus:border-amber-500" oninput="renderGeneratedMatrix()" /></div></div>
           </div>
-          <div><label class="text-[11px] text-slate-400">Colors <span class="text-slate-600">(codes or full names)</span></label><input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="w-full mt-1 bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-200 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" /></div>
-          <div class="flex flex-wrap gap-1">${g.defaultColors.map(code => colorChip(code)).join('')}</div>
+          <fieldset>
+            <legend class="text-[11px] font-semibold text-slate-300 mb-2">Colors <span class="font-normal text-slate-500">(all selected by default)</span></legend>
+            <div id="colors-${g.id}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              ${g.defaultColors.map(code => {
+                const color = COLOR_GUIDE[code] || { name: code, hex: "#64748B" };
+                return `<label class="flex items-center gap-2 min-h-10 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-slate-200 cursor-pointer hover:border-slate-500">
+                  <input type="checkbox" data-color-code="${code}" checked class="h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-amber-500" onchange="renderGeneratedMatrix()" />
+                  <span class="color-swatch h-4 w-4 shrink-0 rounded-full border border-slate-600" style="background:${color.hex}"></span>
+                  <span>${escapeHtml(color.name)}</span>
+                </label>`;
+              }).join('')}
+            </div>
+          </fieldset>
         </div>
       `).join('');
       refreshAutoDesignIds();
       renderGeneratedMatrix();
-    }
-
-    function colorChip(code) {
-      const color = COLOR_GUIDE[code] || { name: code, hex: "#64748B" };
-      return '<span class="inline-flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-full px-2 py-1 text-[10px] text-slate-300"><span class="color-swatch w-3 h-3 rounded-full border border-slate-600" style="background:' + color.hex + '"></span>' + code + ' - ' + escapeHtml(color.name) + '</span>';
     }
 
     function selectAllGarments(checked) {
@@ -1056,7 +1078,7 @@
         const designId = document.getElementById("design-" + g.id)?.value.trim();
         const printLocation = document.getElementById("location-" + g.id)?.value;
         const printMethod = normalizePrintMethod(document.getElementById("method-" + g.id)?.value);
-        const colors = parseColors(document.getElementById("colors-" + g.id)?.value);
+        const colors = getSelectedColorsForGarment(g.id);
         if (!designId) issues.push(g.id + " Design ID");
         if (!PRINT_LOCATIONS[printLocation]) issues.push(g.id + " print location");
         if (!printMethod) issues.push(g.id + " DTG/FTG");
@@ -1077,7 +1099,7 @@
         const designId = document.getElementById("design-" + g.id).value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
         const printLocation = document.getElementById("location-" + g.id).value;
         const printMethod = normalizePrintMethod(document.getElementById("method-" + g.id).value);
-        const colors = parseColors(document.getElementById(`colors-${g.id}`).value);
+        const colors = getSelectedColorsForGarment(g.id);
         if (!designId || !PRINT_LOCATIONS[printLocation] || !printMethod || !colors.length) return;
         const garmentHits = printLocationHits(printLocation);
         const msrpInput = document.getElementById("msrp-" + g.id).value;
@@ -1151,7 +1173,7 @@
         const rawMsrp = document.getElementById("msrp-" + g.id).value;
         products[g.id] = {
           selected: document.getElementById("chk-" + g.id).checked,
-          colors: parseColors(document.getElementById("colors-" + g.id).value).map(color => color.code || color.name),
+          colors: getSelectedColorsForGarment(g.id).map(color => color.code || color.name),
           designId: document.getElementById("design-" + g.id).value.trim().toUpperCase(),
           printLocation: document.getElementById("location-" + g.id).value,
           printMethod: normalizePrintMethod(document.getElementById("method-" + g.id).value),
@@ -1204,8 +1226,8 @@
       document.getElementById("bestGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Best").map(row).join("");
       renderStandardPriceTable();
       renderPrintMethodTable();
-      document.getElementById("colorGuide").innerHTML = Object.entries(COLOR_GUIDE).map(([code, color]) =>
-        '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3 flex items-center gap-3"><span class="color-swatch w-9 h-9 rounded-lg border border-slate-600 shrink-0" style="background:' + color.hex + '"></span><div><div class="font-mono font-bold text-amber-300">' + code + '</div><div class="text-xs text-slate-400">' + color.name + (color.unconfirmed ? ' <span class="text-rose-300">(confirm with Kayla)</span>' : "") + '</div></div></div>'
+      document.getElementById("colorGuide").innerHTML = Object.values(COLOR_GUIDE).map(color =>
+        '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3 flex items-center gap-3"><span class="color-swatch w-9 h-9 rounded-lg border border-slate-600 shrink-0" style="background:' + color.hex + '"></span><div class="font-semibold text-slate-200">' + escapeHtml(color.name) + (color.unconfirmed ? ' <span class="text-xs font-normal text-rose-300">(confirm with Kayla)</span>' : "") + '</div></div>'
       ).join("");
     }
 
@@ -1511,7 +1533,7 @@
         const selected = saved.selected != null ? saved.selected : productRows.length > 0;
         document.getElementById("chk-" + g.id).checked = selected;
         const savedColors = saved.colors && saved.colors.length ? saved.colors : [...new Set(productRows.map(item => item.colorCode || colorDetails(item.color).code || item.color))];
-        document.getElementById("colors-" + g.id).value = savedColors.join(", ") || g.defaultColors.join(", ");
+        setGarmentColorSelections(g.id, savedColors.length ? savedColors : g.defaultColors);
         const designInput = document.getElementById("design-" + g.id);
         const existingDesignId = saved.designId || productRows[0]?.designId || "";
         if (selected) selectedIndex++;
@@ -1539,7 +1561,7 @@
       document.getElementById("brandCode").value = "";
       document.getElementById("assortmentPreset").value = "Better";
       MFA_CATALOG.forEach(g => {
-        document.getElementById("colors-" + g.id).value = g.defaultColors.join(", ");
+        setGarmentColorSelections(g.id, g.defaultColors);
         const designInput = document.getElementById("design-" + g.id);
         designInput.value = "";
         designInput.dataset.manual = "false";
