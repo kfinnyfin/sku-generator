@@ -319,6 +319,8 @@
   <script>
     const CLOUD_SYNC_URL = "https://elrzymdsicvynxdikixk.supabase.co/functions/v1/tmm-cloud-sync";
     const CLOUD_PIN_STORAGE_KEY = "tmm_team_pin";
+    const DEFAULT_SHEET_URL = "https://script.google.com/macros/s/AKfycbyBA5vqpiW1JnYweQW3uPu5lswQ6rT9uLhQpm73SEkMmM2RyeBm5a-cNjFVa8qyBnYW/exec";
+    const SHEET_URL_VERSION = "2026-09-02-new-sku-format";
 
     const COLOR_GUIDE = {
       BLK: { name: "Black", hex: "#111827" },
@@ -494,7 +496,11 @@
     // Initialize UI
     window.onload = async () => {
       const savedUrl = localStorage.getItem("tmm_sheet_url");
-      if (savedUrl) document.getElementById("sheetUrl").value = savedUrl;
+      const savedVersion = localStorage.getItem("tmm_sheet_url_version");
+      const sheetUrl = savedVersion === SHEET_URL_VERSION && savedUrl ? savedUrl : DEFAULT_SHEET_URL;
+      document.getElementById("sheetUrl").value = sheetUrl;
+      localStorage.setItem("tmm_sheet_url", sheetUrl);
+      localStorage.setItem("tmm_sheet_url_version", SHEET_URL_VERSION);
       validatePricingIntegrity();
       renderGarmentSelectors();
       renderHelpContent();
@@ -707,6 +713,7 @@
     function saveSheetUrl() {
       const url = document.getElementById("sheetUrl").value.trim();
       localStorage.setItem("tmm_sheet_url", url);
+      localStorage.setItem("tmm_sheet_url_version", SHEET_URL_VERSION);
       alert("Google Apps Script URL saved locally!");
     }
 
