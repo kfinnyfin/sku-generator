@@ -87,8 +87,9 @@
             <input id="brandName" type="text" placeholder="e.g. Golden Bull" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm focus:border-amber-500 focus:outline-none" oninput="autoGenerateCode()" />
           </div>
           <div>
-            <label class="text-xs font-semibold text-slate-400">Brand Prefix Code</label>
-            <input id="brandCode" type="text" placeholder="e.g. GB" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm uppercase focus:border-amber-500 focus:outline-none" oninput="renderGeneratedMatrix()" />
+            <label class="text-xs font-semibold text-slate-400">Design ID Prefix</label>
+            <input id="brandCode" type="text" placeholder="e.g. GB" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm uppercase focus:border-amber-500 focus:outline-none" oninput="updateBrandCode()" />
+            <p class="text-[11px] text-slate-500 mt-1">Designs are numbered automatically: GB001, GB002, GB003...</p>
           </div>
           <div>
             <label class="text-xs font-semibold text-slate-400">Program Assortment</label>
@@ -99,10 +100,11 @@
             </select>
           </div>
           <div>
-            <label class="text-xs font-semibold text-slate-400">Print Hits Placement</label>
-            <div class="grid grid-cols-2 gap-2 mt-1">
-              <button type="button" onclick="setGlobalHits(1)" id="btn-hit-1" class="bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700">1 Hit (Front)</button>
-              <button type="button" onclick="setGlobalHits(2)" id="btn-hit-2" class="bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs">2 Hits (Back + Pocket)</button>
+            <label class="text-xs font-semibold text-slate-400">Apply Print Location to All</label>
+            <div class="grid grid-cols-3 gap-2 mt-1">
+              <button type="button" onclick="setGlobalPrintLocation('PLF')" id="btn-location-PLF" class="bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700">Front</button>
+              <button type="button" onclick="setGlobalPrintLocation('PLP')" id="btn-location-PLP" class="bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700">Pocket</button>
+              <button type="button" onclick="setGlobalPrintLocation('PLPB')" id="btn-location-PLPB" class="bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs">Pocket + Back</button>
             </div>
           </div>
           <div class="bg-slate-950 border border-slate-700 rounded-lg p-3 space-y-2">
@@ -127,7 +129,7 @@
           <div class="flex justify-between items-center">
             <div>
               <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-palette mr-2"></i>Garments & Colorways</h2>
-              <p class="text-xs text-slate-400">Exact TMM colors are pre-loaded. MSRP starts from the editable Standard Price and is never calculated from MFA cost.</p>
+              <p class="text-xs text-slate-400">Assign each design, print location, and print method. Full garment color names are written into every SKU.</p>
             </div>
             <div class="space-x-2">
               <button onclick="selectAllGarments(true)" class="text-xs bg-slate-900 border border-slate-700 px-2 py-1 rounded text-slate-300 hover:text-amber-400">Select All</button>
@@ -135,7 +137,7 @@
             </div>
           </div>
           
-          <div id="garmentList" class="space-y-3 max-h-[380px] overflow-y-auto pr-2">
+          <div id="garmentList" class="space-y-3 max-h-[560px] overflow-y-auto pr-2">
             <!-- Dynamic Garment Rows Rendered Here -->
           </div>
         </div>
@@ -147,10 +149,11 @@
         <div class="flex justify-between items-center">
           <div>
             <h3 class="font-bold text-base">Generated SKU Catalog</h3>
-            <p class="text-xs text-slate-400">Format: <code>[BRAND]-[MODEL]-[SIZE]-[COLOR]-[HITS]</code></p>
+            <p class="text-xs text-slate-400">Format: <code>[DESIGN_ID]_[PRINT_LOCATION]_[GARMENT_SKU]_[FULL_COLOR]_[SIZE]</code></p>
           </div>
           <span id="previewCount" class="text-xs bg-slate-900 border border-slate-700 px-3 py-1 rounded-full text-amber-400 font-mono">0 SKUs</span>
         </div>
+        <p id="previewStatus" class="hidden text-xs rounded-lg border px-3 py-2" aria-live="polite"></p>
         <div class="overflow-x-auto max-h-96">
           <table class="w-full text-left text-xs border-collapse">
             <thead class="bg-slate-950 text-slate-400 uppercase sticky top-0">
@@ -160,7 +163,8 @@
                 <th class="p-3">Product Name</th>
                 <th class="p-3">Size</th>
                 <th class="p-3">Color</th>
-                <th class="p-3">Hits</th>
+                <th class="p-3">Location</th>
+                <th class="p-3">Method</th>
                 <th class="p-3">Cost (MFA)</th>
                 <th class="p-3">Manual MSRP</th>
               </tr>
@@ -196,7 +200,9 @@
                 <th class="p-3">Product</th>
                 <th class="p-3">Size</th>
                 <th class="p-3">Color</th>
-                <th class="p-3">Hits</th>
+                <th class="p-3">Design ID</th>
+                <th class="p-3">Location</th>
+                <th class="p-3">Method</th>
                 <th class="p-3">MFA Cost</th>
                 <th class="p-3">MSRP</th>
               </tr>
@@ -244,7 +250,9 @@
                 <th class="p-3">Blank Model</th>
                 <th class="p-3">Size</th>
                 <th class="p-3">Color</th>
-                <th class="p-3">Hits</th>
+                <th class="p-3">Design ID</th>
+                <th class="p-3">Location</th>
+                <th class="p-3">Method</th>
                 <th class="p-3">MFA Cost</th>
                 <th class="p-3">MSRP</th>
               </tr>
@@ -261,15 +269,15 @@
         <p class="text-sm text-slate-400 mt-1">How to build and maintain a TMM brand catalog.</p>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">1</span><h3 class="font-bold mt-2">Enter the brand</h3><p class="text-sm text-slate-400 mt-2">Add the full brand name and confirm its short prefix.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">1</span><h3 class="font-bold mt-2">Enter the brand</h3><p class="text-sm text-slate-400 mt-2">Add the full brand name. The app creates a prefix from its initials.</p></div>
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">2</span><h3 class="font-bold mt-2">Choose Better or Best</h3><p class="text-sm text-slate-400 mt-2">The preset selects the correct five program garments. Custom allows a mix.</p></div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">3</span><h3 class="font-bold mt-2">Set colors and MSRP</h3><p class="text-sm text-slate-400 mt-2">Standard Prices prefill MSRP. Override any garment when a partner needs different pricing.</p></div>
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">4</span><h3 class="font-bold mt-2">Save and maintain</h3><p class="text-sm text-slate-400 mt-2">Save, edit, deactivate, reactivate, or permanently delete the portfolio.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">3</span><h3 class="font-bold mt-2">Complete every product</h3><p class="text-sm text-slate-400 mt-2">Confirm its Design ID, print location, DTG or FTG method, colors, and MSRP.</p></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-5"><span class="text-xl font-black text-amber-400">4</span><h3 class="font-bold mt-2">Save and export</h3><p class="text-sm text-slate-400 mt-2">Save to every device, maintain the portfolio, and export Shopify-ready variants.</p></div>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 class="font-bold text-lg text-amber-400">How each SKU is built</h3>
-        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-4 overflow-x-auto"><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB</span>-<span class="text-sky-300">3001</span>-<span class="text-violet-300">S</span>-<span class="text-emerald-300">BLK</span>-<span class="text-rose-300">2</span></code></div>
-        <p class="text-sm text-slate-400 mt-3">Brand prefix - Garment model - Size - Color code - Number of print hits.</p>
+        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-4 overflow-x-auto"><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB001</span>_<span class="text-sky-300">PLPB</span>_<span class="text-violet-300">3001</span>_<span class="text-emerald-300">BLUE_STORM</span>_<span class="text-rose-300">S</span></code></div>
+        <p class="text-sm text-slate-400 mt-3">Design ID - Print location - Garment SKU - Full color name - Size. FTG selections add <code>-FTG</code> to the garment SKU; DTG selections do not.</p>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6"><h3 class="font-bold text-lg text-amber-400">Better Assortment</h3><div id="betterGuide" class="space-y-2 mt-4"></div></div>
@@ -287,9 +295,21 @@
         <div id="standardPriceTable" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
         <p id="standardPriceStatus" class="text-xs text-slate-500" aria-live="polite">These prices are used as the starting MSRP for newly-generated brands.</p>
       </div>
+      <div id="standard-print-methods" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.18em] font-bold text-violet-400">Admin</p>
+            <h3 class="font-bold text-xl mt-1">Standard Print Methods</h3>
+            <p class="text-sm text-slate-400 mt-1 max-w-3xl">Set the normal DTG or FTG method for each product once it is confirmed. “Not set” remains allowed here, but every selected product must have a method before a brand can be saved or exported.</p>
+          </div>
+          <button type="button" onclick="updatePrintMethods()" class="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap"><i class="fa-solid fa-floppy-disk mr-1"></i> Update Print Methods</button>
+        </div>
+        <div id="printMethodTable" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+        <p id="printMethodStatus" class="text-xs text-slate-500" aria-live="polite">These defaults prefill new brand forms. Every product can still be overridden inside a brand.</p>
+      </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 class="font-bold text-lg">Color Code Guide</h3>
-        <p class="text-xs text-slate-400 mt-1 mb-5">Each code includes its full name and a visual swatch.</p>
+        <p class="text-xs text-slate-400 mt-1 mb-5">Use the short codes while configuring a brand; the generated SKU automatically uses the full uppercase color name.</p>
         <div id="colorGuide" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
       </div>
     </section>
@@ -327,6 +347,13 @@
     const BEST_MODELS = ["1717", "3601", "LS14004", "LS14001", "9602"];
     const getCategory = id => BETTER_MODELS.includes(id) ? "Better" : "Best";
     const STANDARD_PRICE_STORAGE_KEY = "tmm_standard_prices";
+    const PRINT_METHOD_STORAGE_KEY = "tmm_print_methods";
+    const SKU_FORMAT_VERSION = 2;
+    const PRINT_LOCATIONS = Object.freeze({
+      PLF: { label: "Front", hits: 1 },
+      PLP: { label: "Pocket", hits: 1 },
+      PLPB: { label: "Pocket + Back", hits: 2 }
+    });
     const DEFAULT_STANDARD_PRICES = Object.freeze({
       "3001": 30,
       "3501": 35,
@@ -338,6 +365,10 @@
       "LS14004": 45,
       "LS14001": 55,
       "9602": 65
+    });
+    const DEFAULT_PRINT_METHODS = Object.freeze({
+      "3001": "", "3501": "", "JHA030": "", "JHA001": "", "3739": "",
+      "1717": "", "3601": "", "LS14004": "", "LS14001": "", "9602": ""
     });
 
     // --- COMPLETE MARCO FINE ARTS CATALOG WITH TMM PROGRAM COLORS ---
@@ -454,7 +485,7 @@
       }
     ];
 
-    let currentHits = 2; // Default 2 hits
+    let currentPrintLocation = "PLPB";
     let masterData = [];
     let editingOriginalBrand = null;
     let inactivePanelOpen = false;
@@ -591,6 +622,7 @@
               active: catalog.active !== false,
               products: catalog.products || {},
               skus: Array.isArray(catalog.skus) ? catalog.skus : [],
+              skuFormatVersion: Number(catalog.skuFormatVersion || 0),
               updatedAt: catalog.updated_at
             };
           });
@@ -607,6 +639,12 @@
           saveStandardPricesLocally(result.standardPrices);
           renderStandardPriceTable();
           applyStandardPricesToNewBrandForm(previousPrices, false);
+        }
+        if (result.printMethods && Object.keys(result.printMethods).length) {
+          const previousMethods = getPrintMethods();
+          savePrintMethodsLocally(result.printMethods);
+          renderPrintMethodTable();
+          applyPrintMethodsToNewBrandForm(previousMethods, false);
         }
         setCloudStatus("Shared cloud · synced", "ready");
         if (showNotice) alert("Shared cloud data is up to date on this device.");
@@ -635,6 +673,11 @@
       await cloudRequest("saveStandardPrices", { prices });
     }
 
+    async function savePrintMethodsToCloud(methods) {
+      if (!requireCloudAccess()) throw new Error("Team PIN required.");
+      await cloudRequest("savePrintMethods", { methods });
+    }
+
     async function migrateLocalBrandsToCloud() {
       if (!requireCloudAccess()) return;
       const button = document.getElementById("cloudMigrationButton");
@@ -648,6 +691,7 @@
           await upsertBrandToCloud(config, null);
         }
         await saveStandardPricesToCloud(getStandardPrices());
+        await savePrintMethodsToCloud(getPrintMethods());
         document.getElementById("cloudMigrationBanner").classList.add("hidden");
         await refreshFromCloud(false);
         alert("Your local catalogs are now in the shared workspace and available on every device that opens this app.");
@@ -680,8 +724,16 @@
       if (editingOriginalBrand) return;
       const name = document.getElementById("brandName").value.trim();
       if (!name) return;
-      const code = name.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 4);
+      const code = name.split(/[^A-Za-z0-9]+/).filter(Boolean).map(word => word[0]).join("").toUpperCase().substring(0, 4);
       document.getElementById("brandCode").value = code || "BRAND";
+      refreshAutoDesignIds();
+      renderGeneratedMatrix();
+    }
+
+    function updateBrandCode() {
+      const input = document.getElementById("brandCode");
+      input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+      refreshAutoDesignIds();
       renderGeneratedMatrix();
     }
 
@@ -706,6 +758,26 @@
       localStorage.setItem(STANDARD_PRICE_STORAGE_KEY, JSON.stringify(prices));
     }
 
+    function normalizePrintMethod(value) {
+      const method = String(value || "").trim().toUpperCase();
+      return method === "DTG" || method === "FTG" ? method : "";
+    }
+
+    function getPrintMethods() {
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem(PRINT_METHOD_STORAGE_KEY) || "{}"); }
+      catch (e) { saved = {}; }
+      const methods = {};
+      Object.keys(DEFAULT_PRINT_METHODS).forEach(model => {
+        methods[model] = normalizePrintMethod(saved[model]);
+      });
+      return methods;
+    }
+
+    function savePrintMethodsLocally(methods) {
+      localStorage.setItem(PRINT_METHOD_STORAGE_KEY, JSON.stringify(methods));
+    }
+
     function applyStandardPricesToNewBrandForm(previousPrices, force) {
       if (editingOriginalBrand) return;
       const prices = getStandardPrices();
@@ -719,6 +791,73 @@
         }
       });
       renderGeneratedMatrix();
+    }
+
+    function applyPrintMethodsToNewBrandForm(previousMethods, force) {
+      if (editingOriginalBrand) return;
+      const methods = getPrintMethods();
+      MFA_CATALOG.forEach(g => {
+        const input = document.getElementById("method-" + g.id);
+        if (!input) return;
+        const previousValue = previousMethods ? normalizePrintMethod(previousMethods[g.id]) : "";
+        if (force || !input.value || input.value === previousValue) input.value = methods[g.id];
+      });
+      renderGeneratedMatrix();
+    }
+
+    function selectedGarments() {
+      return MFA_CATALOG.filter(g => document.getElementById("chk-" + g.id)?.checked);
+    }
+
+    function refreshAutoDesignIds() {
+      const prefix = (document.getElementById("brandCode")?.value || "BRAND").toUpperCase().replace(/[^A-Z0-9]/g, "") || "BRAND";
+      selectedGarments().forEach((g, index) => {
+        const input = document.getElementById("design-" + g.id);
+        if (!input || input.dataset.manual === "true") return;
+        input.value = prefix + String(index + 1).padStart(3, "0");
+      });
+    }
+
+    function markDesignIdManual(input) {
+      input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20);
+      input.dataset.manual = input.value ? "true" : "false";
+      if (!input.value) refreshAutoDesignIds();
+      renderGeneratedMatrix();
+    }
+
+    function colorDetails(value) {
+      const raw = String(value || "").trim();
+      const normalizedCode = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (COLOR_GUIDE[normalizedCode]) {
+        return { code: normalizedCode, name: COLOR_GUIDE[normalizedCode].name };
+      }
+      const normalizedName = raw.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+      const match = Object.entries(COLOR_GUIDE).find(([, color]) => color.name.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim() === normalizedName);
+      if (match) return { code: match[0], name: match[1].name };
+      return { code: "", name: raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim() };
+    }
+
+    function parseColors(value) {
+      const seen = new Set();
+      return String(value || "").split(",").map(colorDetails).filter(color => {
+        const key = color.name.toUpperCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function skuColorName(value) {
+      return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    }
+
+    function printLocationHits(location) {
+      return PRINT_LOCATIONS[location]?.hits || 0;
+    }
+
+    function buildSku(designId, printLocation, garmentId, printMethod, colorName, size) {
+      const garmentSku = garmentId + (printMethod === "FTG" ? "-FTG" : "");
+      return [designId, printLocation, garmentSku, skuColorName(colorName), size].join("_");
     }
 
     function escapeHtml(value) {
@@ -804,13 +943,14 @@
         const groupId = targetId + "-group-" + index;
         const label = (includeBrand ? escapeHtml(first.brand) + " - " : "") + escapeHtml(first.product) + " - " + escapeHtml(first.model);
         const tierClass = first.category === "Better" ? "text-amber-300" : "text-sky-300";
+        const needsUpdate = rows.some(item => Number(item.formatVersion || 0) !== SKU_FORMAT_VERSION || !item.printMethod || !item.designId || !item.printLocation);
         const details = rows.map(item =>
-          '<tr class="border-t border-slate-800"><td class="p-2">' + renderSkuCopyButton(item.sku) + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2">' + escapeHtml(item.hits) + ' Hit</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
+          '<tr class="border-t border-slate-800"><td class="p-2">' + renderSkuCopyButton(item.sku) + '</td><td class="p-2 ' + (item.designId ? "text-amber-300" : "text-rose-300") + '">' + escapeHtml(item.designId || "Needs setup") + '</td><td class="p-2">' + escapeHtml(item.printLocation || "Legacy") + '</td><td class="p-2 ' + (item.printMethod ? "text-slate-200" : "text-rose-300") + '">' + escapeHtml(item.printMethod || "Not set") + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
         ).join("");
-        return '<tr class="bg-slate-950/70 hover:bg-slate-700 cursor-pointer" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span><p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></div></td></tr>' +
-          '<tr id="' + groupId + '" class="hidden"><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-3 bg-slate-900"><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-slate-500 uppercase"><tr><th class="p-2">SKU</th><th class="p-2">Size</th><th class="p-2">Color</th><th class="p-2">Hits</th><th class="p-2">MFA Cost</th><th class="p-2">MSRP</th></tr></thead><tbody>' + details + '</tbody></table></div></td></tr>';
+        return '<tr class="bg-slate-950/70 hover:bg-slate-700 cursor-pointer" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span>' + (needsUpdate ? '<span class="ml-2 text-[10px] font-sans font-bold rounded-full bg-rose-950 text-rose-300 px-2 py-1">Needs SKU setup</span>' : '') + '<p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></div></td></tr>' +
+          '<tr id="' + groupId + '" class="hidden"><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-3 bg-slate-900"><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-slate-500 uppercase"><tr><th class="p-2">SKU</th><th class="p-2">Design ID</th><th class="p-2">Location</th><th class="p-2">Method</th><th class="p-2">Size</th><th class="p-2">Color</th><th class="p-2">MFA Cost</th><th class="p-2">MSRP</th></tr></thead><tbody>' + details + '</tbody></table></div></td></tr>';
       }).join("");
-      if (!items.length) target.innerHTML = '<tr><td colspan="' + (includeBrand ? 10 : 7) + '" class="p-6 text-center text-slate-500 italic">No matching SKUs.</td></tr>';
+      if (!items.length) target.innerHTML = '<tr><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-6 text-center text-slate-500 italic">No matching SKUs.</td></tr>';
     }
 
     function setBrandMeta(meta) {
@@ -824,21 +964,25 @@
         const checkbox = document.getElementById("chk-" + g.id);
         if (checkbox) checkbox.checked = getCategory(g.id) === preset;
       });
+      refreshAutoDesignIds();
       renderGeneratedMatrix();
     }
 
     function manualGarmentChange() {
       document.getElementById("assortmentPreset").value = "Custom";
+      refreshAutoDesignIds();
       renderGeneratedMatrix();
     }
 
-    function setGlobalHits(hits) {
-      currentHits = hits;
-      document.getElementById("btn-hit-1").className = hits === 1 ? "bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs" : "bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700";
-      document.getElementById("btn-hit-2").className = hits === 2 ? "bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs" : "bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700";
+    function setGlobalPrintLocation(location) {
+      currentPrintLocation = PRINT_LOCATIONS[location] ? location : "PLPB";
+      Object.keys(PRINT_LOCATIONS).forEach(code => {
+        const button = document.getElementById("btn-location-" + code);
+        if (button) button.className = code === currentPrintLocation ? "bg-amber-500 text-slate-950 font-bold py-2 rounded-lg text-xs" : "bg-slate-950 text-slate-400 font-bold py-2 rounded-lg text-xs hover:bg-slate-700";
+      });
       MFA_CATALOG.forEach(g => {
-        const input = document.getElementById("hits-" + g.id);
-        if (input) input.value = String(hits);
+        const input = document.getElementById("location-" + g.id);
+        if (input) input.value = currentPrintLocation;
       });
       renderGeneratedMatrix();
     }
@@ -846,6 +990,7 @@
     function renderGarmentSelectors() {
       const container = document.getElementById("garmentList");
       const standardPrices = getStandardPrices();
+      const printMethods = getPrintMethods();
       container.innerHTML = MFA_CATALOG.map((g) => `
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3 text-xs">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -855,20 +1000,23 @@
             </div>
             <span class="text-[10px] uppercase tracking-wide font-bold border rounded-full px-2 py-1 ${getCategory(g.id) === 'Better' ? 'bg-amber-950 text-amber-300 border-amber-800' : 'bg-sky-950 text-sky-300 border-sky-800'}">${getCategory(g.id)}</span>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-[1fr_110px_140px] gap-3">
-            <div><label class="text-[11px] text-slate-400">Color codes</label><input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-200 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" /></div>
-            <div><label class="text-[11px] text-slate-400">Hits</label><select id="hits-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px]" onchange="renderGeneratedMatrix()"><option value="1">1 - Front</option><option value="2" selected>2 - Back + Pocket</option></select></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div><label class="text-[11px] text-slate-400">Design ID</label><input type="text" id="design-${g.id}" data-manual="false" placeholder="GB001" maxlength="20" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-amber-300 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="markDesignIdManual(this)" /></div>
+            <div><label class="text-[11px] text-slate-400">Print location</label><select id="location-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px]" onchange="renderGeneratedMatrix()"><option value="PLF">PLF - Front</option><option value="PLP">PLP - Pocket</option><option value="PLPB" selected>PLPB - Pocket + Back</option></select></div>
+            <div><label class="text-[11px] text-slate-400">Print method <span class="text-rose-300">Required</span></label><select id="method-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px] focus:border-violet-500" onchange="renderGeneratedMatrix()"><option value="" ${printMethods[g.id] ? '' : 'selected'}>Select DTG or FTG</option><option value="DTG" ${printMethods[g.id] === 'DTG' ? 'selected' : ''}>DTG</option><option value="FTG" ${printMethods[g.id] === 'FTG' ? 'selected' : ''}>FTG</option></select></div>
             <div><label class="text-[11px] text-slate-400">Manual MSRP</label><div class="relative"><span class="absolute left-3 top-2 text-slate-500">$</span><input type="number" id="msrp-${g.id}" min="0" step="0.01" value="${standardPrices[g.id].toFixed(2)}" class="w-full bg-slate-900 border border-slate-700 pl-7 pr-2 py-2 rounded text-slate-100 text-[11px] focus:outline-none focus:border-amber-500" oninput="renderGeneratedMatrix()" /></div></div>
           </div>
+          <div><label class="text-[11px] text-slate-400">Colors <span class="text-slate-600">(codes or full names)</span></label><input type="text" id="colors-${g.id}" value="${g.defaultColors.join(', ')}" class="w-full mt-1 bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-200 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="renderGeneratedMatrix()" /></div>
           <div class="flex flex-wrap gap-1">${g.defaultColors.map(code => colorChip(code)).join('')}</div>
         </div>
       `).join('');
+      refreshAutoDesignIds();
       renderGeneratedMatrix();
     }
 
     function colorChip(code) {
       const color = COLOR_GUIDE[code] || { name: code, hex: "#64748B" };
-      return '<span class="inline-flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-full px-2 py-1 text-[10px] text-slate-300"><span class="color-swatch w-3 h-3 rounded-full border border-slate-600" style="background:' + color.hex + '"></span>' + code + '</span>';
+      return '<span class="inline-flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-full px-2 py-1 text-[10px] text-slate-300"><span class="color-swatch w-3 h-3 rounded-full border border-slate-600" style="background:' + color.hex + '"></span>' + code + ' - ' + escapeHtml(color.name) + '</span>';
     }
 
     function selectAllGarments(checked) {
@@ -877,6 +1025,7 @@
         if (chk) chk.checked = checked;
       });
       document.getElementById("assortmentPreset").value = "Custom";
+      refreshAutoDesignIds();
       renderGeneratedMatrix();
     }
 
@@ -894,6 +1043,21 @@
       }
     }
 
+    function getSelectedProductIssues() {
+      const issues = [];
+      selectedGarments().forEach(g => {
+        const designId = document.getElementById("design-" + g.id)?.value.trim();
+        const printLocation = document.getElementById("location-" + g.id)?.value;
+        const printMethod = normalizePrintMethod(document.getElementById("method-" + g.id)?.value);
+        const colors = parseColors(document.getElementById("colors-" + g.id)?.value);
+        if (!designId) issues.push(g.id + " Design ID");
+        if (!PRINT_LOCATIONS[printLocation]) issues.push(g.id + " print location");
+        if (!printMethod) issues.push(g.id + " DTG/FTG");
+        if (!colors.length) issues.push(g.id + " colors");
+      });
+      return issues;
+    }
+
     function generateCurrentSKUs() {
       const brandCode = (document.getElementById("brandCode").value.trim() || "BRAND").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const brandName = document.getElementById("brandName").value.trim() || "Unassigned Brand";
@@ -903,25 +1067,35 @@
         const isChecked = document.getElementById(`chk-${g.id}`)?.checked;
         if (!isChecked) return;
 
-        const colorInput = document.getElementById(`colors-${g.id}`).value;
-        const colors = [...new Set(colorInput.split(',').map(c => c.trim().toUpperCase().replace(/[^A-Z0-9]/g, "")).filter(c => c.length > 0))];
-        const garmentHits = Number(document.getElementById("hits-" + g.id).value || currentHits);
+        const designId = document.getElementById("design-" + g.id).value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const printLocation = document.getElementById("location-" + g.id).value;
+        const printMethod = normalizePrintMethod(document.getElementById("method-" + g.id).value);
+        const colors = parseColors(document.getElementById(`colors-${g.id}`).value);
+        if (!designId || !PRINT_LOCATIONS[printLocation] || !printMethod || !colors.length) return;
+        const garmentHits = printLocationHits(printLocation);
         const msrpInput = document.getElementById("msrp-" + g.id).value;
         const manualMsrp = msrpInput === "" ? "" : Number(msrpInput).toFixed(2);
+        const garmentSku = g.id + (printMethod === "FTG" ? "-FTG" : "");
 
         g.sizes.forEach(size => {
           colors.forEach(color => {
             const cost = getItemCost(g, size, garmentHits);
-            const sku = `${brandCode}-${g.id}-${size}-${color}-${garmentHits}`;
+            const sku = buildSku(designId, printLocation, g.id, printMethod, color.name, size);
             rows.push({
               brand: brandName,
               brandCode: brandCode,
               category: getCategory(g.id),
               sku: sku,
+              formatVersion: SKU_FORMAT_VERSION,
+              designId: designId,
+              printLocation: printLocation,
+              printMethod: printMethod,
+              garmentSku: garmentSku,
               product: g.name,
               model: `${g.mfr} ${g.id}`,
               size: size,
-              color: color,
+              color: color.name,
+              colorCode: color.code,
               hits: garmentHits,
               cost: cost.toFixed(2),
               msrp: manualMsrp
@@ -935,7 +1109,19 @@
 
     function renderGeneratedMatrix() {
       const skus = generateCurrentSKUs();
+      const issues = getSelectedProductIssues();
       document.getElementById("previewCount").innerText = `${skus.length} SKUs`;
+      const status = document.getElementById("previewStatus");
+      if (issues.length) {
+        status.className = "text-xs rounded-lg border px-3 py-2 bg-rose-950/60 border-rose-800 text-rose-200";
+        status.innerText = "Complete these required fields before saving: " + issues.join(", ") + ".";
+      } else if (selectedGarments().length) {
+        status.className = "text-xs rounded-lg border px-3 py-2 bg-emerald-950/60 border-emerald-800 text-emerald-200";
+        status.innerText = "SKU format is complete and ready to save.";
+      } else {
+        status.className = "hidden text-xs rounded-lg border px-3 py-2";
+        status.innerText = "";
+      }
       const tbody = document.getElementById("previewTableBody");
       tbody.innerHTML = skus.slice(0, 100).map(s => `
         <tr class="hover:bg-slate-700/40">
@@ -943,8 +1129,9 @@
           <td class="p-3 ${s.category === 'Better' ? 'text-amber-300' : 'text-sky-300'}">${s.category}</td>
           <td class="p-3 text-slate-300 font-sans">${s.product}</td>
           <td class="p-3">${s.size}</td>
-          <td class="p-3">${s.color}</td>
-          <td class="p-3">${s.hits} Hit</td>
+          <td class="p-3">${escapeHtml(s.color)}</td>
+          <td class="p-3">${s.printLocation}</td>
+          <td class="p-3 ${s.printMethod === 'FTG' ? 'text-violet-300' : 'text-cyan-300'}">${s.printMethod}</td>
           <td class="p-3 text-emerald-400">$${s.cost}</td>
           <td class="p-3 ${s.msrp ? 'text-slate-300' : 'text-rose-300'}">${s.msrp ? '$' + s.msrp : 'MSRP not set'}</td>
         </tr>
@@ -957,8 +1144,11 @@
         const rawMsrp = document.getElementById("msrp-" + g.id).value;
         products[g.id] = {
           selected: document.getElementById("chk-" + g.id).checked,
-          colors: [...new Set(document.getElementById("colors-" + g.id).value.split(",").map(value => value.trim().toUpperCase()).filter(Boolean))],
-          hits: Number(document.getElementById("hits-" + g.id).value),
+          colors: parseColors(document.getElementById("colors-" + g.id).value).map(color => color.code || color.name),
+          designId: document.getElementById("design-" + g.id).value.trim().toUpperCase(),
+          printLocation: document.getElementById("location-" + g.id).value,
+          printMethod: normalizePrintMethod(document.getElementById("method-" + g.id).value),
+          hits: printLocationHits(document.getElementById("location-" + g.id).value),
           msrp: rawMsrp === "" ? null : Number(rawMsrp)
         };
       });
@@ -967,6 +1157,7 @@
         code: document.getElementById("brandCode").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""),
         assortment: document.getElementById("assortmentPreset").value,
         active: active !== false,
+        skuFormatVersion: SKU_FORMAT_VERSION,
         products: products,
         skus: skus
       };
@@ -1005,6 +1196,7 @@
       document.getElementById("betterGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Better").map(row).join("");
       document.getElementById("bestGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Best").map(row).join("");
       renderStandardPriceTable();
+      renderPrintMethodTable();
       document.getElementById("colorGuide").innerHTML = Object.entries(COLOR_GUIDE).map(([code, color]) =>
         '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3 flex items-center gap-3"><span class="color-swatch w-9 h-9 rounded-lg border border-slate-600 shrink-0" style="background:' + color.hex + '"></span><div><div class="font-mono font-bold text-amber-300">' + code + '</div><div class="text-xs text-slate-400">' + color.name + (color.unconfirmed ? ' <span class="text-rose-300">(confirm with Kayla)</span>' : "") + '</div></div></div>'
       ).join("");
@@ -1019,6 +1211,19 @@
           return '<label class="grid grid-cols-[1fr_110px] items-center gap-4 px-4 py-3"><span><span class="block text-sm font-semibold text-slate-200">' + escapeHtml(garment.name) + '</span><span class="text-xs text-slate-500">' + escapeHtml(garment.mfr) + ' - ' + escapeHtml(model) + '</span></span><span class="relative"><span class="absolute left-3 top-2.5 text-slate-500">$</span><input id="standard-price-' + escapeHtml(model) + '" type="number" min="0" step="0.01" value="' + prices[model].toFixed(2) + '" aria-label="Standard price for ' + escapeHtml(garment.name) + '" class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-3 py-2 text-sm font-mono focus:outline-none focus:border-emerald-500" /></span></label>';
         }).join("") + '</div></div>';
       document.getElementById("standardPriceTable").innerHTML =
+        tierColumn("Better", BETTER_MODELS, "text-amber-300") +
+        tierColumn("Best", BEST_MODELS, "text-sky-300");
+    }
+
+    function renderPrintMethodTable() {
+      const methods = getPrintMethods();
+      const tierColumn = (tier, models, accentClass) =>
+        '<div class="bg-slate-950 border border-slate-700 rounded-xl overflow-hidden"><div class="px-4 py-3 border-b border-slate-700 font-bold ' + accentClass + '">' + tier + '</div><div class="divide-y divide-slate-800">' +
+        models.map(model => {
+          const garment = MFA_CATALOG.find(g => g.id === model);
+          return '<label class="grid grid-cols-[1fr_130px] items-center gap-4 px-4 py-3"><span><span class="block text-sm font-semibold text-slate-200">' + escapeHtml(garment.name) + '</span><span class="text-xs text-slate-500">' + escapeHtml(garment.mfr) + ' - ' + escapeHtml(model) + '</span></span><select id="standard-method-' + escapeHtml(model) + '" aria-label="Standard print method for ' + escapeHtml(garment.name) + '" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-violet-500"><option value=""' + (!methods[model] ? ' selected' : '') + '>Not set</option><option value="DTG"' + (methods[model] === 'DTG' ? ' selected' : '') + '>DTG</option><option value="FTG"' + (methods[model] === 'FTG' ? ' selected' : '') + '>FTG</option></select></label>';
+        }).join("") + '</div></div>';
+      document.getElementById("printMethodTable").innerHTML =
         tierColumn("Better", BETTER_MODELS, "text-amber-300") +
         tierColumn("Best", BEST_MODELS, "text-sky-300");
     }
@@ -1059,6 +1264,35 @@
       }
     }
 
+    async function updatePrintMethods() {
+      if (!requireCloudAccess()) return;
+      const previousMethods = getPrintMethods();
+      const methods = {};
+      Object.keys(DEFAULT_PRINT_METHODS).forEach(model => {
+        methods[model] = normalizePrintMethod(document.getElementById("standard-method-" + model).value);
+      });
+      try {
+        await savePrintMethodsToCloud(methods);
+        savePrintMethodsLocally(methods);
+        applyPrintMethodsToNewBrandForm(previousMethods, false);
+        const status = document.getElementById("printMethodStatus");
+        status.className = "text-xs text-emerald-400";
+        status.innerText = "Standard Print Methods updated in the shared workspace. Existing saved brands were not changed.";
+        let sheetMessage = "";
+        try {
+          const result = await postToSheet({ action: "savePrintMethods", printMethods: methods });
+          sheetMessage = result ? " Google Sheets was updated too." : "";
+        } catch (sheetError) {
+          console.error(sheetError);
+          sheetMessage = " The cloud copy is safe, but Google Sheets did not confirm its update.";
+        }
+        alert("Standard Print Methods updated." + sheetMessage);
+      } catch (error) {
+        console.error(error);
+        alert("Print Methods were not changed because the shared cloud workspace did not confirm the update: " + error.message);
+      }
+    }
+
     function downloadCsv(filename, csv) {
       const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
       const link = document.createElement("a");
@@ -1077,6 +1311,8 @@
 
     function buildShopifyCsv(items) {
       if (!items.length) throw new Error("There are no active SKUs to export.");
+      const legacy = items.filter(item => Number(item.formatVersion || 0) !== SKU_FORMAT_VERSION || !item.designId || !item.printLocation || !item.printMethod);
+      if (legacy.length) throw new Error("This catalog still uses the old SKU format. Open the brand, choose DTG or FTG for every selected product, and save it before exporting to Shopify.");
       const missing = items.filter(item => !item.msrp);
       if (missing.length) throw new Error("Set MSRP for every exported variant before creating a Shopify file.");
       const headers = [
@@ -1088,7 +1324,7 @@
       ];
       const productGroups = {};
       items.forEach(item => {
-        const key = item.brand + "|" + item.model + "|" + item.hits;
+        const key = item.brand + "|" + item.designId + "|" + item.model + "|" + item.printLocation + "|" + item.printMethod;
         if (!productGroups[key]) productGroups[key] = [];
         productGroups[key].push(item);
       });
@@ -1097,15 +1333,15 @@
         group.sort((a, b) => (a.color + a.size).localeCompare(b.color + b.size));
         group.forEach((item, index) => {
           const modelId = String(item.model).split(/\s+/).pop();
-          const handle = (item.brandCode + "-" + modelId + "-" + item.hits + "-hit").toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
-          const colorName = COLOR_GUIDE[item.color] ? COLOR_GUIDE[item.color].name : item.color;
+          const handle = (item.designId + "-" + modelId + "-" + item.printLocation).toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
+          const colorName = item.color || (COLOR_GUIDE[item.colorCode] ? COLOR_GUIDE[item.colorCode].name : item.colorCode);
           rows.push([
             handle,
-            index === 0 ? item.brand + " - " + item.product + " (" + item.hits + " Hit)" : "",
-            index === 0 ? "TMM " + item.category + " assortment with " + item.hits + "-hit print placement." : "",
+            index === 0 ? item.brand + " - " + item.product + " (" + item.designId + ")" : "",
+            index === 0 ? "TMM " + item.category + " assortment. " + PRINT_LOCATIONS[item.printLocation].label + " print placement using " + item.printMethod + "." : "",
             index === 0 ? item.brand : "",
             index === 0 ? item.product : "",
-            index === 0 ? "TMM," + item.category + ",Model-" + modelId + "," + item.hits + "-Hit" : "",
+            index === 0 ? "TMM," + item.category + ",Model-" + modelId + "," + item.printLocation + "," + item.printMethod + ",Design-" + item.designId : "",
             index === 0 ? "FALSE" : "",
             "Size", item.size, "Color", colorName, "", "",
             item.sku, "", "", "", "deny", "manual", item.msrp, "", "TRUE", "TRUE", "", "", "", item.cost
@@ -1152,8 +1388,11 @@
       if (!requireCloudAccess()) return;
       const brandName = document.getElementById("brandName").value.trim();
       if (!brandName) return alert("Please specify a Brand Name.");
+      if (!selectedGarments().length) return alert("Select at least one garment.");
+      const setupIssues = getSelectedProductIssues();
+      if (setupIssues.length) return alert("Complete the required SKU setup before saving: " + setupIssues.join(", ") + ".");
       const skus = generateCurrentSKUs();
-      if (!skus.length) return alert("Select at least one garment and one color.");
+      if (!skus.length) return alert("No SKUs could be generated. Check the selected garments and colors.");
       const missing = MFA_CATALOG.filter(g => document.getElementById("chk-" + g.id).checked && document.getElementById("msrp-" + g.id).value === "");
       if (missing.length) return alert("Manual MSRP is required for: " + missing.map(g => g.id + " " + g.name).join(", ") + ".");
 
@@ -1207,6 +1446,10 @@
       refreshMasterMatrix();
     }
 
+    function catalogNeedsSkuUpdate(rows) {
+      return rows.length > 0 && rows.some(item => Number(item.formatVersion || 0) !== SKU_FORMAT_VERSION || !item.designId || !item.printLocation || !item.printMethod);
+    }
+
     function renderBrandCards(containerId, names, brands, meta, inactive) {
       const container = document.getElementById(containerId);
       if (!names.length) {
@@ -1217,15 +1460,17 @@
         const rows = brands[name] || [];
         const better = rows.filter(item => item.category === "Better").length;
         const best = rows.filter(item => item.category === "Best").length;
+        const needsSkuUpdate = catalogNeedsSkuUpdate(rows);
         const safeName = escapeHtml(name);
         return '<article class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">' +
           '<div><div class="flex justify-between gap-2"><h4 class="font-bold text-lg">' + safeName + '</h4><span class="text-[10px] uppercase px-2 py-1 rounded-full ' + (inactive ? "bg-slate-950 text-slate-400" : "bg-emerald-950 text-emerald-300") + '">' + (inactive ? "Inactive" : "Active") + '</span></div>' +
           '<p class="text-xs text-slate-400 mt-1">' + rows.length + ' SKUs - ' + escapeHtml(meta[name].assortment || "Custom") + '</p>' +
+          (needsSkuUpdate ? '<p class="text-[11px] font-bold text-rose-300 mt-2"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Needs DTG/FTG selection for new SKU format</p>' : '<p class="text-[11px] font-bold text-emerald-300 mt-2"><i class="fa-solid fa-circle-check mr-1"></i>New Shopify SKU format ready</p>') +
           '<div class="flex gap-2 mt-3 text-[10px]"><span class="bg-amber-950 text-amber-300 rounded-full px-2 py-1">Better ' + better + '</span><span class="bg-sky-950 text-sky-300 rounded-full px-2 py-1">Best ' + best + '</span></div></div>' +
           '<div class="grid grid-cols-2 gap-2">' +
           (inactive ? '<button data-action="reactivate" data-brand="' + safeName + '" class="bg-emerald-700 hover:bg-emerald-600 rounded-lg px-2 py-2 text-xs font-bold">Reactivate</button>' :
-            '<button data-action="view" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">View</button><button data-action="edit" data-brand="' + safeName + '" class="bg-sky-700 hover:bg-sky-600 rounded-lg px-2 py-2 text-xs font-bold">Edit</button><button data-action="deactivate" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">Deactivate</button>') +
-          '<button data-action="export" data-brand="' + safeName + '" class="bg-emerald-800 hover:bg-emerald-700 rounded-lg px-2 py-2 text-xs font-bold"><i class="fa-brands fa-shopify mr-1"></i>Export</button>' +
+            '<button data-action="view" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">View</button><button data-action="edit" data-brand="' + safeName + '" class="' + (needsSkuUpdate ? 'bg-rose-700 hover:bg-rose-600' : 'bg-sky-700 hover:bg-sky-600') + ' rounded-lg px-2 py-2 text-xs font-bold">' + (needsSkuUpdate ? 'Set Up New SKUs' : 'Edit') + '</button><button data-action="deactivate" data-brand="' + safeName + '" class="bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-2 text-xs font-bold">Deactivate</button>') +
+          '<button data-action="export" data-brand="' + safeName + '" class="' + (needsSkuUpdate ? 'bg-slate-700 text-slate-400' : 'bg-emerald-800 hover:bg-emerald-700') + ' rounded-lg px-2 py-2 text-xs font-bold"><i class="fa-brands fa-shopify mr-1"></i>Export</button>' +
           '<button data-action="delete" data-brand="' + safeName + '" class="col-span-2 bg-rose-950 hover:bg-rose-900 text-rose-200 rounded-lg px-2 py-2 text-xs font-bold">Delete Permanently</button>' +
           '</div></article>';
       }).join("");
@@ -1251,16 +1496,27 @@
       document.getElementById("brandName").value = brandName;
       document.getElementById("brandCode").value = config.code || rows[0]?.brandCode || "";
       document.getElementById("assortmentPreset").value = config.assortment || "Custom";
+      const printMethods = getPrintMethods();
+      let selectedIndex = 0;
       MFA_CATALOG.forEach(g => {
         const productRows = rows.filter(item => String(item.model || "").endsWith(" " + g.id));
         const saved = config.products && config.products[g.id] ? config.products[g.id] : {};
-        document.getElementById("chk-" + g.id).checked = saved.selected != null ? saved.selected : productRows.length > 0;
-        document.getElementById("colors-" + g.id).value = (saved.colors && saved.colors.length ? saved.colors : [...new Set(productRows.map(item => item.color))]).join(", ") || g.defaultColors.join(", ");
-        document.getElementById("hits-" + g.id).value = String(saved.hits || productRows[0]?.hits || 2);
+        const selected = saved.selected != null ? saved.selected : productRows.length > 0;
+        document.getElementById("chk-" + g.id).checked = selected;
+        const savedColors = saved.colors && saved.colors.length ? saved.colors : [...new Set(productRows.map(item => item.colorCode || colorDetails(item.color).code || item.color))];
+        document.getElementById("colors-" + g.id).value = savedColors.join(", ") || g.defaultColors.join(", ");
+        const designInput = document.getElementById("design-" + g.id);
+        const existingDesignId = saved.designId || productRows[0]?.designId || "";
+        if (selected) selectedIndex++;
+        designInput.value = existingDesignId || (selected ? (document.getElementById("brandCode").value || "BRAND") + String(selectedIndex).padStart(3, "0") : "");
+        designInput.dataset.manual = existingDesignId ? "true" : "false";
+        const legacyHits = Number(saved.hits || productRows[0]?.hits || 2);
+        document.getElementById("location-" + g.id).value = saved.printLocation || productRows[0]?.printLocation || (legacyHits === 1 ? "PLF" : "PLPB");
+        document.getElementById("method-" + g.id).value = normalizePrintMethod(saved.printMethod || productRows[0]?.printMethod || printMethods[g.id]);
         document.getElementById("msrp-" + g.id).value = saved.msrp != null ? saved.msrp : productRows[0]?.msrp || "";
       });
       document.getElementById("editBanner").classList.remove("hidden");
-      document.getElementById("editBannerText").innerText = "Editing " + brandName + ". Saving updates its existing Google Sheet tab.";
+      document.getElementById("editBannerText").innerText = catalogNeedsSkuUpdate(rows) ? "Updating " + brandName + " to the new SKU format. Choose DTG or FTG for every selected product before saving." : "Editing " + brandName + ". Saving updates its shared catalog and Google Sheet tab.";
       switchTab("tab-create");
       renderGeneratedMatrix();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1271,14 +1527,20 @@
       document.getElementById("editBanner").classList.add("hidden");
       if (clearForm === false) return;
       const standardPrices = getStandardPrices();
+      const printMethods = getPrintMethods();
       document.getElementById("brandName").value = "";
       document.getElementById("brandCode").value = "";
       document.getElementById("assortmentPreset").value = "Better";
       MFA_CATALOG.forEach(g => {
         document.getElementById("colors-" + g.id).value = g.defaultColors.join(", ");
-        document.getElementById("hits-" + g.id).value = "2";
+        const designInput = document.getElementById("design-" + g.id);
+        designInput.value = "";
+        designInput.dataset.manual = "false";
+        document.getElementById("location-" + g.id).value = "PLPB";
+        document.getElementById("method-" + g.id).value = printMethods[g.id];
         document.getElementById("msrp-" + g.id).value = standardPrices[g.id].toFixed(2);
       });
+      setGlobalPrintLocation("PLPB");
       applyAssortmentPreset();
     }
 
@@ -1349,6 +1611,12 @@
             saveStandardPricesLocally(result.standardPrices);
             renderStandardPriceTable();
             applyStandardPricesToNewBrandForm(previousPrices, false);
+          }
+          if (result.printMethods && Object.keys(result.printMethods).length) {
+            const previousMethods = getPrintMethods();
+            savePrintMethodsLocally(result.printMethods);
+            renderPrintMethodTable();
+            applyPrintMethodsToNewBrandForm(previousMethods, false);
           }
           if (Array.isArray(result.catalogs) && result.catalogs.length) {
             const brands = {};
