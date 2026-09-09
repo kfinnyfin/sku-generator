@@ -17,6 +17,7 @@
     .sku-copy-button.copy-failed,.sku-copy-button.copy-failed .sku-copy-action{color:#fb7185}
     @media (hover:none){.sku-copy-action{opacity:1;transform:none}.sku-copy-label{display:none}.sku-copy-button.is-copied .sku-copy-label,.sku-copy-button.copy-failed .sku-copy-label{display:inline}}
   </style>
+  <link rel="stylesheet" href="tmm-studio.css" />
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -25,8 +26,8 @@
     <div class="flex items-center gap-3">
       <img src="assets/tmm-logo.png" alt="Too Much Merch logo" class="h-16 w-16 sm:h-20 sm:w-20 object-contain shrink-0" width="80" height="80" />
       <div>
-        <h1 class="text-xl font-bold">Too Much Merch — SKU Engine</h1>
-        <p class="text-xs text-slate-400">Marco Fine Arts Catalog & Pricing Sync</p>
+        <h1 class="text-xl font-bold">Too Much Merch</h1>
+        <p class="text-xs text-slate-400">SKU studio <span class="studio-divider">/</span> Team workspace</p>
       </div>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3">
@@ -39,9 +40,12 @@
       <a href="https://docs.google.com/spreadsheets/d/1NtVfiEp008RI-2yQupPD_cJiTQtV0fhGcmFeHEO_QQE/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-xs rounded-lg font-bold whitespace-nowrap" aria-label="Open the TMM SKU Google Sheet">
         <i class="fa-solid fa-table-cells mr-1"></i> Open SKU Spreadsheet
       </a>
+      <details class="sheet-settings"><summary><i class="fa-solid fa-sliders" aria-hidden="true"></i> Sheet connection</summary><div class="sheet-settings-panel">
+      <label for="sheetUrl">Google Apps Script URL</label>
       <input id="sheetUrl" type="text" placeholder="Paste Google Apps Script Web App URL" class="bg-slate-950 border border-slate-700 text-xs px-3 py-2 rounded-lg w-72 focus:outline-none focus:border-amber-500" />
       <button onclick="saveSheetUrl()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 text-xs rounded-lg font-semibold"><i class="fa-solid fa-link mr-1"></i> Connect Sheet</button>
       <button onclick="syncFromGoogleSheet()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-2 text-xs rounded-lg font-bold"><i class="fa-solid fa-arrows-rotate mr-1"></i> Pull Sheet Data</button>
+      </div></details>
     </div>
   </header>
 
@@ -50,7 +54,7 @@
       <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 shadow-2xl">
         <div class="flex items-center gap-3">
           <img src="assets/tmm-logo.png" alt="Too Much Merch logo" class="h-16 w-16 object-contain" width="64" height="64" />
-          <div><h2 class="text-xl font-black">Team PIN</h2><p class="text-sm text-slate-400">Enter it once on this device</p></div>
+          <div><h2 class="text-xl font-black">Welcome to SKU studio</h2><p class="text-sm text-slate-400">Your brands. One shared workspace.</p></div>
         </div>
         <label for="teamPin" class="block mt-6 text-xs font-bold text-slate-300">4-digit code</label>
         <input id="teamPin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="••••" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-center text-2xl tracking-[0.6em] font-mono focus:outline-none focus:border-emerald-500" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" onkeydown="if(event.key === 'Enter') unlockCloud()" />
@@ -62,10 +66,10 @@
 
   <!-- Navigation Tabs -->
   <nav class="bg-slate-800/50 border-b border-slate-700 px-6 flex flex-wrap gap-x-6 gap-y-1 text-sm font-semibold">
-    <button onclick="switchTab('tab-create')" id="btn-create" class="py-3 border-b-2 border-amber-500 text-amber-400">1. Add Brand & Configure SKUs</button>
-    <button onclick="switchTab('tab-tiles')" id="btn-tiles" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">2. Brand Portfolios</button>
-    <button onclick="switchTab('tab-master')" id="btn-master" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">3. Master SKU Matrix</button>
-    <button onclick="switchTab('tab-help')" id="btn-help" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200"><i class="fa-solid fa-circle-question mr-1"></i> Instructions & Color Guide</button>
+    <button onclick="switchTab('tab-create')" id="btn-create" class="py-3 border-b-2 border-amber-500 text-amber-400"><i class="fa-solid fa-plus" aria-hidden="true"></i> Build a catalog</button>
+    <button onclick="switchTab('tab-tiles')" id="btn-tiles" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Brand portfolios</button>
+    <button onclick="switchTab('tab-master')" id="btn-master" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200"><i class="fa-solid fa-table-cells" aria-hidden="true"></i> SKU library</button>
+    <button onclick="switchTab('tab-help')" id="btn-help" class="py-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Reference & pricing</button>
   </nav>
 
   <main class="p-6 max-w-7xl mx-auto">
@@ -77,11 +81,12 @@
 
     <!-- TAB 1: ADD PRODUCTS & SKU CREATOR -->
     <section id="tab-create" class="space-y-6">
+      <div class="studio-intro"><div><p class="studio-eyebrow">Catalog workspace</p><h2>Every detail. Every SKU.</h2><p>Build a consistent catalog for your next brand, from garment to Shopify-ready export.</p></div><span class="studio-step">01 <span>Brand</span><b> / </b>02 <span>Garments</span><b> / </b>03 <span>Review</span></span></div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         <!-- Brand Info -->
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
-          <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-store mr-2"></i>Brand Details</h2>
+          <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-store mr-2"></i>Brand details</h2>
           <div>
             <label class="text-xs font-semibold text-slate-400">Brand Name</label>
             <input id="brandName" type="text" placeholder="e.g. Golden Bull" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 mt-1 text-sm focus:border-amber-500 focus:outline-none" oninput="autoGenerateCode()" />
@@ -120,7 +125,7 @@
             <button type="button" onclick="cancelEdit()" class="block mt-2 underline font-bold">Cancel editing</button>
           </div>
           <button onclick="saveBrandData()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg font-bold text-sm flex justify-center items-center gap-2">
-            <i class="fa-solid fa-cloud-arrow-up"></i> Save Brand & Sync Everywhere
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save brand catalog
           </button>
         </div>
 
@@ -128,7 +133,7 @@
         <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 md:col-span-2 space-y-4">
           <div class="flex justify-between items-center">
             <div>
-              <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-palette mr-2"></i>Garments & Colorways</h2>
+              <h2 class="font-bold text-lg text-amber-400"><i class="fa-solid fa-palette mr-2"></i>Garments & colorways</h2>
               <p class="text-xs text-slate-400">Assign each design, print location, and print method. Full garment color names are written into every SKU.</p>
             </div>
             <div class="space-x-2">
@@ -148,7 +153,7 @@
       <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
         <div class="flex justify-between items-center">
           <div>
-            <h3 class="font-bold text-base">Generated SKU Catalog</h3>
+            <h3 class="font-bold text-base">Review your SKUs</h3>
             <p class="text-xs text-slate-400">Format: <code>[DESIGN_ID]_[PRINT_LOCATION]_[GARMENT_SKU]_[FULL_COLOR]_[SIZE]</code></p>
           </div>
           <span id="previewCount" class="text-xs bg-slate-900 border border-slate-700 px-3 py-1 rounded-full text-amber-400 font-mono">0 SKUs</span>

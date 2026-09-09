@@ -1,0 +1,4 @@
+/* Substitution note: no brand font files were supplied. Sora (display) + Public Sans (body)
+   are Google Fonts stand-ins chosen for a clean, premium, ecommerce-appropriate feel.
+   Flagged in readme.md — replace with real brand fonts if TMM has them. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
