@@ -1,0 +1,96 @@
+@import url('./design-system/tokens/fonts.css');
+@import url('./design-system/tokens/colors.css');
+@import url('./design-system/tokens/typography.css');
+@import url('./design-system/tokens/effects.css');
+
+/* Presentation-only adapter. Existing class names are also emitted by the SKU
+   engine, so map them without changing catalog, pricing, or sync behavior. */
+body { background:var(--surface-cream)!important; color:var(--text-primary)!important; font-family:var(--font-body); }
+body .bg-slate-800 { background-color:var(--surface-card); }
+body .bg-slate-900,body .bg-slate-950 { background-color:var(--gray-50); }
+body .bg-slate-700,body .bg-slate-600 { background-color:var(--gray-100); }
+body [class*="border-slate-"] { border-color:var(--border-subtle); }
+body [class*="divide-slate-"] > :not([hidden]) ~ :not([hidden]) { border-color:var(--border-subtle); }
+body .text-slate-100,body .text-slate-200,body .text-slate-950,body .text-white { color:var(--text-primary); }
+body .text-slate-300,body .text-slate-400,body .text-slate-500 { color:var(--text-secondary); }
+body [class*="text-amber-"] { color:var(--brand-secondary); }
+body [class*="border-amber-"] { border-color:var(--brand-primary); }
+body .bg-amber-500,body .bg-emerald-600,body .bg-emerald-700,body .bg-emerald-800 { background-color:var(--brand-secondary);color:white; }
+body [class*="bg-emerald-950"],body .bg-amber-950 { background-color:var(--green-50); }
+body [class*="text-emerald-"] { color:var(--green-700); }
+body [class*="bg-sky-950"],body [class*="bg-violet-950"] { background-color:var(--color-info-bg); }
+body [class*="text-sky-"],body [class*="text-violet-"] { color:var(--color-info); }
+body [class*="bg-rose-950"] { background-color:var(--color-error-bg); }
+body [class*="text-rose-"] { color:var(--color-error); }
+body [class*="border-rose-"] { border-color:var(--color-error); }
+body .bg-sky-700,body .bg-sky-600 { background-color:var(--color-info);color:white; }
+body .bg-rose-700 { background-color:var(--color-error);color:white; }
+body button:hover,body label.cursor-pointer:hover { filter:brightness(.96); }
+body button:active { transform:scale(.98); }
+body button,body input,body select,body summary { transition:background-color 120ms,border-color 120ms; }
+body :is(button,input,select,summary,a):focus-visible { outline:3px solid var(--brand-primary)!important;outline-offset:3px; }
+body input:not([type=checkbox]),body select { background:var(--surface-card);min-height:40px; }
+body input[type=checkbox] { accent-color:var(--brand-secondary);width:16px;height:16px; }
+body input::placeholder { color:var(--text-tertiary); }
+body .font-mono { font-family:var(--font-mono); }
+body h2,body h3,body h4 { letter-spacing:-.025em; }
+body > header { padding:18px max(24px,calc((100vw - 1200px)/2));background:white!important; }
+body > header img { width:66px;height:66px; }
+body > header h1 { font-size:17px;letter-spacing:-.5px; }
+.studio-divider { padding:0 6px;color:var(--gray-300); }
+body > header > div:last-child { gap:10px; }
+body > header > div:last-child > div { background:var(--gray-50); }
+body > header a { text-decoration:none; }
+body > nav { padding:0 max(24px,calc((100vw - 1200px)/2));background:white!important;gap:30px;font-size:13px; }
+body > nav button { padding:19px 0;white-space:nowrap; }
+body > nav i { margin-right:7px;font-size:12px; }
+body > main { max-width:1248px;padding-top:36px;padding-bottom:64px; }
+.studio-intro { display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:30px!important; }
+.studio-eyebrow { font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-secondary);margin-bottom:10px; }
+.studio-intro h2 { font-size:32px;line-height:1.2;font-weight:600;margin-bottom:12px; }
+.studio-intro p:last-child { font-size:13px;color:var(--text-secondary);max-width:520px;line-height:1.7; }
+.studio-step { flex-shrink:0;font-family:var(--font-mono);font-size:11px;color:var(--brand-secondary);padding-bottom:4px; }
+.studio-step span { font-family:var(--font-body);color:var(--text-secondary); }
+.studio-step b { padding:0 8px;font-weight:400;color:var(--gray-300); }
+#tab-create > .grid { grid-template-columns:320px minmax(0,1fr);gap:24px;align-items:start; }
+#tab-create > .grid > div { padding:24px;border-radius:var(--radius-lg);min-width:0; }
+#tab-create > .grid > div:last-child { grid-column:auto; }
+#tab-create > .grid > div:first-child { position:sticky;top:24px; }
+#tab-create h2.text-lg { font-size:16px;color:var(--text-primary); }
+#tab-create h2 i { color:var(--brand-secondary); }
+#garmentList { max-height:680px;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gray-300) transparent; }
+#garmentList > div { padding:16px;background:var(--gray-50);border-radius:var(--radius-md); }
+#garmentList > div:has(input[id^=chk-]:checked) { background:white;border-color:var(--green-200); }
+#garmentList > div > div:first-child > div { align-items:flex-start; }
+#garmentList > div > div:first-child label { line-height:1.6; }
+#garmentList > div > div:first-child label span { display:block;font-size:11px; }
+#garmentList [id^=colors-] { grid-template-columns:repeat(3,minmax(0,1fr)); }
+#garmentList [id^=colors-] label { background:white;padding:8px;gap:6px; }
+#garmentList [id^=colors-] label:has(input:checked) { background:var(--green-50);border-color:var(--green-200); }
+.color-swatch { box-shadow:inset 0 0 0 1px rgba(22,21,15,.12); }
+body thead { background:var(--gray-50)!important;text-transform:none!important;font-family:var(--font-body); }
+body th { font-weight:600;white-space:nowrap;padding:14px 12px!important; }
+body td { padding:12px!important; }
+body tbody tr:hover { background:var(--green-50); }
+.sku-copy-button { color:var(--brand-secondary); }
+.sku-copy-button:hover,.sku-copy-button:focus-visible { background:var(--green-50);border-color:var(--green-200); }
+.sku-copy-action { color:var(--text-secondary); }
+.sheet-settings { position:relative;font-size:12px; }
+.sheet-settings summary { cursor:pointer;padding:10px 12px;border:1px solid var(--border-subtle);border-radius:var(--radius-sm);list-style:none; }
+.sheet-settings summary::-webkit-details-marker { display:none; }
+.sheet-settings summary i { margin-right:6px; }
+.sheet-settings-panel { position:absolute;right:0;top:46px;z-index:30;display:grid;gap:12px;width:350px;padding:20px;background:white;border:1px solid var(--border-subtle);border-radius:var(--radius-md);box-shadow:var(--shadow-md); }
+.sheet-settings-panel input { width:100%; }
+#pinGate { background:var(--surface-cream)!important;backdrop-filter:none; }
+#pinGate > div > div { max-width:450px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:40px; }
+#pinGate h2 { font-size:20px;font-weight:600; }
+#pinGate img { width:70px;height:70px; }
+#pinGate #pinSubmitButton { color:white;background:var(--brand-secondary); }
+#teamPin { height:60px; }
+#cloudDot.bg-emerald-400 { background:var(--brand-primary); }
+#cloudDot.bg-rose-400 { background:var(--color-error); }
+#cloudDot.bg-amber-400 { background:var(--color-warning); }
+#brandGrid article,#inactiveBrandGrid article { border-radius:var(--radius-lg); }
+@media(max-width:1000px) { .studio-step {display:none;} #tab-create > .grid {grid-template-columns:280px minmax(0,1fr);} #garmentList [id^=colors-] {grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media(max-width:760px) { body > header {padding:16px 20px;} body > header > div:last-child {justify-content:flex-start;} body > nav {padding:0 20px;flex-wrap:nowrap;overflow-x:auto;gap:24px;} body > main {padding:24px 16px;} .studio-intro h2 {font-size:26px;} #tab-create > .grid {grid-template-columns:minmax(0,1fr);} #tab-create > .grid > div:first-child {position:static;} #garmentList {max-height:none;} #tab-create > .grid > div {padding:18px;} .sheet-settings-panel {right:auto;left:0;width:min(350px,calc(100vw - 40px));} #pinGate > div > div {padding:26px;} #tab-create > .grid > div:last-child > div:first-child {flex-wrap:wrap;gap:12px;} }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after {transition:none!important;animation:none!important;scroll-behavior:auto!important;} }
