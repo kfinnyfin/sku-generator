@@ -955,6 +955,7 @@
       if (!row) return;
       const opening = row.classList.contains("hidden");
       row.classList.toggle("hidden", !opening);
+      document.getElementById(groupId + "-toggle")?.setAttribute("aria-expanded", String(opening));
       if (icon) icon.className = "fa-solid " + (opening ? "fa-chevron-up" : "fa-chevron-down") + " text-slate-400";
     }
 
@@ -975,7 +976,7 @@
         const details = rows.map(item =>
           '<tr class="border-t border-slate-800"><td class="p-2">' + renderSkuCopyButton(item.sku) + '</td><td class="p-2 ' + (item.designId ? "text-amber-300" : "text-rose-300") + '">' + escapeHtml(item.designId || "Needs setup") + '</td><td class="p-2">' + escapeHtml(item.printLocation || "Legacy") + '</td><td class="p-2 ' + (item.printMethod ? "text-slate-200" : "text-rose-300") + '">' + escapeHtml(item.printMethod || "Not set") + '</td><td class="p-2">' + escapeHtml(item.size) + '</td><td class="p-2">' + escapeHtml(item.color) + '</td><td class="p-2 text-emerald-400">$' + escapeHtml(item.cost) + '</td><td class="p-2 ' + (item.msrp ? "text-slate-200" : "text-rose-300") + '">' + (item.msrp ? "$" + escapeHtml(item.msrp) : "MSRP not set") + '</td></tr>'
         ).join("");
-        return '<tr class="bg-slate-950/70 hover:bg-slate-700 cursor-pointer" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span>' + (needsUpdate ? '<span class="ml-2 text-[10px] font-sans font-bold rounded-full bg-rose-950 text-rose-300 px-2 py-1">Needs SKU setup</span>' : '') + '<p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></div></td></tr>' +
+        return '<tr class="sku-group-row"><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-4"><button type="button" class="sku-group-toggle" id="' + groupId + '-toggle" aria-expanded="false" aria-controls="' + groupId + '" onclick="toggleSkuGroup(&quot;' + groupId + '&quot;)"><span class="flex flex-wrap items-center justify-between gap-3"><div><span class="font-sans font-bold text-slate-100">' + label + '</span><span class="ml-2 text-xs ' + tierClass + '">' + escapeHtml(first.category || "") + '</span>' + (needsUpdate ? '<span class="ml-2 text-[10px] font-sans font-bold rounded-full bg-rose-950 text-rose-300 px-2 py-1">Needs SKU setup</span>' : '') + '<p class="text-xs text-slate-500 mt-1">' + rows.length + ' SKUs - click to expand sizes and colors</p></div><i id="' + groupId + '-icon" class="fa-solid fa-chevron-down text-slate-400"></i></span></button></td></tr>' +
           '<tr id="' + groupId + '" class="hidden"><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-3 bg-slate-900"><div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="text-slate-500 uppercase"><tr><th class="p-2">SKU</th><th class="p-2">Design ID</th><th class="p-2">Location</th><th class="p-2">Method</th><th class="p-2">Size</th><th class="p-2">Color</th><th class="p-2">MFA Cost</th><th class="p-2">MSRP</th></tr></thead><tbody>' + details + '</tbody></table></div></td></tr>';
       }).join("");
       if (!items.length) target.innerHTML = '<tr><td colspan="' + (includeBrand ? 12 : 9) + '" class="p-6 text-center text-slate-500 italic">No matching SKUs.</td></tr>';
@@ -1019,7 +1020,7 @@
       const container = document.getElementById("garmentList");
       const standardPrices = getStandardPrices();
       const printMethods = getPrintMethods();
-      container.innerHTML = MFA_CATALOG.map((g) => `
+      container.innerHTML = MFA_CATALOG.map((g, index) => `
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3 text-xs">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
@@ -1028,6 +1029,9 @@
             </div>
             <span class="text-[10px] uppercase tracking-wide font-bold border rounded-full px-2 py-1 ${getCategory(g.id) === 'Better' ? 'bg-amber-950 text-amber-300 border-amber-800' : 'bg-sky-950 text-sky-300 border-sky-800'}">${getCategory(g.id)}</span>
           </div>
+          <details class="garment-settings" ${index === 0 ? 'open' : ''}>
+          <summary><span>Design, print & colors</span><span id="setup-summary-${g.id}" class="garment-summary"></span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+          <div class="garment-settings-body">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div><label class="text-[11px] text-slate-400">Design ID</label><input type="text" id="design-${g.id}" data-manual="false" placeholder="GB001" maxlength="20" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-amber-300 uppercase text-[11px] focus:outline-none focus:border-amber-500 font-mono" oninput="markDesignIdManual(this)" /></div>
             <div><label class="text-[11px] text-slate-400">Print location</label><select id="location-${g.id}" class="w-full bg-slate-900 border border-slate-700 px-2 py-2 rounded text-slate-100 text-[11px]" onchange="renderGeneratedMatrix()"><option value="PLF">PLF - Front</option><option value="PLP">PLP - Pocket</option><option value="PLPB" selected>PLPB - Pocket + Back</option></select></div>
@@ -1047,6 +1051,8 @@
               }).join('')}
             </div>
           </fieldset>
+          </div>
+          </details>
         </div>
       `).join('');
       refreshAutoDesignIds();
@@ -1142,6 +1148,14 @@
     }
 
     function renderGeneratedMatrix() {
+      MFA_CATALOG.forEach(g => {
+        const summary = document.getElementById('setup-summary-' + g.id);
+        if (!summary) return;
+        const method = document.getElementById('method-' + g.id).value;
+        const selected = document.getElementById('chk-' + g.id).checked;
+        summary.textContent = !selected ? 'Not included' : (method || 'Choose print method') + ' · ' + getSelectedColorsForGarment(g.id).length + ' colors';
+        summary.classList.toggle('needs-method', selected && !method);
+      });
       const skus = generateCurrentSKUs();
       const issues = getSelectedProductIssues();
       document.getElementById("previewCount").innerText = `${skus.length} SKUs`;

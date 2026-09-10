@@ -14,7 +14,7 @@ body [class*="divide-slate-"] > :not([hidden]) ~ :not([hidden]) { border-color:v
 body .text-slate-100,body .text-slate-200,body .text-slate-950,body .text-white { color:var(--text-primary); }
 body .text-slate-300,body .text-slate-400,body .text-slate-500 { color:var(--text-secondary); }
 body [class*="text-amber-"] { color:var(--brand-secondary); }
-body [class*="border-amber-"] { border-color:var(--brand-primary); }
+body .border-amber-500,body .border-amber-800 { border-color:var(--brand-primary); }
 body .bg-amber-500,body .bg-emerald-600,body .bg-emerald-700,body .bg-emerald-800 { background-color:var(--brand-secondary);color:white; }
 body [class*="bg-emerald-950"],body .bg-amber-950 { background-color:var(--green-50); }
 body [class*="text-emerald-"] { color:var(--green-700); }
@@ -58,7 +58,7 @@ body > main { max-width:1248px;padding-top:36px;padding-bottom:64px; }
 #tab-create > .grid > div:first-child { position:sticky;top:24px; }
 #tab-create h2.text-lg { font-size:16px;color:var(--text-primary); }
 #tab-create h2 i { color:var(--brand-secondary); }
-#garmentList { max-height:680px;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--gray-300) transparent; }
+#garmentList { max-height:none;padding-right:0;overflow:visible; }
 #garmentList > div { padding:16px;background:var(--gray-50);border-radius:var(--radius-md); }
 #garmentList > div:has(input[id^=chk-]:checked) { background:white;border-color:var(--green-200); }
 #garmentList > div > div:first-child > div { align-items:flex-start; }
@@ -98,8 +98,35 @@ body .sku-copy-button.copy-failed,body .sku-copy-button.copy-failed .sku-copy-ac
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after {transition:none!important;animation:none!important;scroll-behavior:auto!important;} }
 
 /* Preserve semantic states in the light theme, including generated rows. */
+body .sku-group-row {background:var(--surface-card);}
+body .sku-group-row:hover {background:var(--green-50);}
+body .sku-group-row > td {padding:0!important;}
+.sku-group-toggle {width:100%;text-align:left;padding:18px 20px;color:var(--text-primary);font-family:var(--font-body);}
+body .sku-group-toggle:active {transform:none;}
+.sku-group-toggle p {font-family:var(--font-body);}
+table:has(> #masterTableBody) > thead,table:has(> #brandDetailTable) > thead {display:none;}
+body .hover\:bg-slate-700\/40:hover {background:var(--green-50);}
+.garment-settings summary {display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none;padding:10px 0 0;color:var(--text-secondary);font-size:12px;}
+.garment-settings summary::-webkit-details-marker {display:none;}
+.garment-settings summary i {font-size:10px;transition:transform 120ms;}
+.garment-settings[open] summary i {transform:rotate(180deg);}
+.garment-summary {margin-left:auto;font-size:11px;}
+.garment-summary.needs-method {color:var(--color-error);}
+.garment-settings-body {display:grid;gap:16px;padding-top:16px;margin-top:12px;border-top:1px solid var(--border-subtle);}
+#garmentList .garment-settings-body input:not([type=checkbox]),#garmentList .garment-settings-body select {border-color:var(--border-subtle);border-radius:var(--radius-sm);}
+#garmentList [id^=colors-] {display:flex;flex-wrap:wrap;gap:6px;}
+#garmentList [id^=colors-] label {min-height:32px;padding:6px 10px;border-radius:var(--radius-sm);font-size:11px;}
+#garmentList [id^=colors-] label:has(input:checked) {background:var(--green-50);border-color:var(--border-subtle);}
+body > header {padding-top:12px;padding-bottom:12px;}
+body > header img {width:52px;height:52px;}
+body > nav button {padding-top:14px;padding-bottom:14px;}
+body > main {padding-top:26px;}
+.studio-intro {margin-bottom:22px!important;}
+.studio-intro h2 {font-size:28px;margin-bottom:8px;}
+#tab-create > .grid > div {padding:20px;}
+@media(max-width:500px) {.garment-settings summary {flex-wrap:wrap;gap:6px;}.garment-summary {margin-left:0;flex:1;text-align:right;font-size:10px;}.sku-group-toggle {padding:14px;}.studio-intro h2 {font-size:24px;}}
 body [class*="text-slate-600"] {color:var(--text-secondary);}
-body [class*="border-sky-"],body [class*="border-violet-"] {border-color:var(--color-info);}
+body .border-sky-800,body .border-violet-800 {border-color:var(--color-info);}
 body [class*="border-emerald-"] {border-color:var(--green-200);}
 body .hover\:bg-slate-800:hover,body .hover\:bg-slate-700:hover,body .hover\:bg-slate-600:hover {background:var(--gray-100);color:var(--text-primary);}
 body .hover\:bg-emerald-500:hover,body .hover\:bg-emerald-600:hover,body .hover\:bg-emerald-700:hover,body .hover\:bg-amber-400:hover {background:var(--green-800);color:white;}
