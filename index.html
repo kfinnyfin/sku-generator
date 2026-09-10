@@ -300,6 +300,14 @@
         <div id="standardPriceTable" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
         <p id="standardPriceStatus" class="text-xs text-slate-500" aria-live="polite">These prices are used as the starting MSRP for newly-generated brands.</p>
       </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div><h3 class="font-bold text-xl">Garment SKU codes</h3><p class="text-sm text-slate-400 mt-1">Edit the garment code used in generated SKUs. Enter the base code only, such as C1717. The print method adds -FTG automatically.</p></div>
+          <button type="button" id="saveGarmentCodes" onclick="updateGarmentCodes()" class="bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold">Save garment codes</button>
+        </div>
+        <div id="garmentCodeTable" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+        <p id="garmentCodeStatus" class="text-xs text-slate-500" aria-live="polite">Shared across devices. Existing saved catalogs keep their SKUs until you edit and save each brand again.</p>
+      </div>
       <div id="standard-print-methods" class="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-5">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -618,6 +626,9 @@
       try {
         const localBrandsBefore = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
         const result = await cloudRequest("fetchAll");
+        localStorage.setItem("tmm_garment_codes", JSON.stringify(result.garmentCodes || {}));
+        renderGarmentCodeTable();
+        renderGeneratedMatrix();
         const catalogs = Array.isArray(result.catalogs) ? result.catalogs : [];
 
         if (catalogs && catalogs.length) {
@@ -884,7 +895,7 @@
     }
 
     function buildSku(designId, printLocation, garmentId, printMethod, colorName, size) {
-      const garmentSku = garmentId + (printMethod === "FTG" ? "-FTG" : "");
+      const garmentSku = getGarmentCodes()[garmentId] + (printMethod === "FTG" ? "-FTG" : "");
       return [designId, printLocation, garmentSku, skuColorName(colorName), size].join("_");
     }
 
@@ -1115,7 +1126,7 @@
         const garmentHits = printLocationHits(printLocation);
         const msrpInput = document.getElementById("msrp-" + g.id).value;
         const manualMsrp = msrpInput === "" ? "" : Number(msrpInput).toFixed(2);
-        const garmentSku = g.id + (printMethod === "FTG" ? "-FTG" : "");
+        const garmentSku = getGarmentCodes()[g.id] + (printMethod === "FTG" ? "-FTG" : "");
 
         g.sizes.forEach(size => {
           colors.forEach(color => {
@@ -1240,6 +1251,7 @@
     }
 
     function renderHelpContent() {
+      renderGarmentCodeTable();
       const row = g => '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3"><span class="font-bold">' + g.mfr + " " + g.id + '</span><p class="text-xs text-slate-400">' + g.name + '</p></div>';
       document.getElementById("betterGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Better").map(row).join("");
       document.getElementById("bestGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Best").map(row).join("");
@@ -1310,6 +1322,47 @@
         console.error(error);
         alert("Standard Prices were not changed because the shared cloud workspace did not confirm the update: " + error.message);
       }
+    }
+
+    function getGarmentCodes() {
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem('tmm_garment_codes') || '{}'); } catch {}
+      return Object.fromEntries(MFA_CATALOG.map(g => [g.id, saved[g.id] || (g.id === '1717' ? 'C1717' : g.id)]));
+    }
+
+    function renderGarmentCodeTable() {
+      const codes = getGarmentCodes();
+      document.getElementById('garmentCodeTable').innerHTML = MFA_CATALOG.map(g => '<div class="bg-slate-950 border border-slate-700 rounded-lg p-4"><label for="garment-code-' + g.id + '" class="block text-sm font-semibold">' + escapeHtml(g.mfr + ' ' + g.id + ' · ' + g.name) + '</label><input id="garment-code-' + g.id + '" value="' + escapeHtml(codes[g.id]) + '" maxlength="24" class="mt-2 w-full border border-slate-700 rounded-lg px-3 py-2 font-mono text-sm" autocomplete="off" spellcheck="false" /></div>').join('');
+    }
+
+    async function updateGarmentCodes() {
+      if (!requireCloudAccess()) return;
+      const codes = {};
+      const seen = new Set();
+      const status = document.getElementById('garmentCodeStatus');
+      for (const g of MFA_CATALOG) {
+        const input = document.getElementById('garment-code-' + g.id);
+        const code = input.value.trim().toUpperCase();
+        if (!/^[A-Z0-9][A-Z0-9-]{0,23}$/.test(code) || code.endsWith('-FTG') || seen.has(code)) {
+          status.textContent = 'Use a unique base code for each garment: letters, numbers, or hyphens. Do not include spaces, underscores, or -FTG.';
+          input.focus();
+          return;
+        }
+        codes[g.id] = code;
+        seen.add(code);
+      }
+      const button = document.getElementById('saveGarmentCodes');
+      button.disabled = true;
+      status.textContent = 'Saving garment codes…';
+      try {
+        await cloudRequest('saveGarmentCodes', { codes });
+        localStorage.setItem('tmm_garment_codes', JSON.stringify(codes));
+        renderGarmentCodeTable();
+        renderGeneratedMatrix();
+        status.textContent = 'Saved across devices. New SKUs use these codes. Edit and save an existing brand to regenerate its catalog.';
+      } catch (error) {
+        status.textContent = 'Codes were not saved: ' + error.message;
+      } finally { button.disabled = false; }
     }
 
     async function updatePrintMethods() {
