@@ -281,7 +281,8 @@
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 class="font-bold text-lg text-amber-400">How each SKU is built</h3>
-        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-4 overflow-x-auto"><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB001</span>_<span class="text-sky-300">PLPB</span>_<span class="text-violet-300">3001</span>_<span class="text-emerald-300">BLUE_STORM</span>_<span class="text-rose-300">S</span></code></div>
+        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-4 overflow-x-auto"><p class="text-sm font-bold mb-2">DTG example</p><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB001</span>_<span class="text-sky-300">PLPB</span>_<span class="text-violet-300">3001</span>_<span class="text-emerald-300">BLUE_STORM</span>_<span class="text-rose-300">S</span></code></div>
+        <div class="bg-slate-950 border border-slate-700 rounded-lg p-4 mt-3 overflow-x-auto"><p class="text-sm font-bold mb-2">FTG example</p><code class="text-base whitespace-nowrap"><span class="text-amber-300">GB001</span>_<span class="text-sky-300">PLPB</span>_<span class="text-violet-300">LS14001-FTG</span>_<span class="text-emerald-300">BLACK</span>_<span class="text-rose-300">S</span></code></div>
         <p class="text-sm text-slate-400 mt-3">Design ID - Print location - Garment SKU - Full color name - Size. FTG selections add <code>-FTG</code> to the garment SKU; DTG selections do not.</p>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -322,6 +323,15 @@
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 class="font-bold text-lg">Color Guide</h3>
+        <div class="my-5 p-4 border border-slate-700 rounded-lg space-y-3">
+          <h4 class="font-semibold">Add color</h4>
+          <label class="block text-xs">Full color name<input id="newColorName" maxlength="50" placeholder="e.g. Navy Blue" class="block mt-1 border border-slate-700 rounded-lg px-3 py-2 text-sm" /></label>
+          <label class="block text-xs">Swatch<input id="newColorHex" type="color" value="#223344" class="block w-16" /></label>
+          <fieldset><legend class="text-xs mb-2">Available on these garments</legend><div id="newColorGarments" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div></fieldset>
+          <p class="text-xs text-slate-400">Use the supplier's exact name. Navy Blue becomes NAVY_BLUE in the SKU. The swatch controls its appearance here.</p>
+          <button type="button" id="addColorButton" onclick="addCatalogColor()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Save new color</button>
+          <p id="newColorStatus" class="text-xs" aria-live="polite"></p>
+        </div>
         <p class="text-xs text-slate-400 mt-1 mb-5">Colors are shown by their full names throughout the app. Generated SKUs format multi-word colors with underscores automatically.</p>
         <div id="colorGuide" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
       </div>
@@ -626,6 +636,7 @@
       try {
         const localBrandsBefore = JSON.parse(localStorage.getItem("tmm_local_brands") || "{}");
         const result = await cloudRequest("fetchAll");
+        applyCustomColors(result.customColors || []);
         localStorage.setItem("tmm_garment_codes", JSON.stringify(result.garmentCodes || {}));
         renderGarmentCodeTable();
         renderGeneratedMatrix();
@@ -1052,7 +1063,7 @@
           <fieldset>
             <legend class="text-[11px] font-semibold text-slate-300 mb-2">Colors <span class="font-normal text-slate-500">(all selected by default)</span></legend>
             <div id="colors-${g.id}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              ${g.defaultColors.map(code => {
+              ${availableColorCodes(g).map(code => {
                 const color = COLOR_GUIDE[code] || { name: code, hex: "#64748B" };
                 return `<label class="flex items-center gap-2 min-h-10 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-slate-200 cursor-pointer hover:border-slate-500">
                   <input type="checkbox" data-color-code="${code}" checked class="h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-amber-500" onchange="renderGeneratedMatrix()" />
@@ -1251,6 +1262,7 @@
     }
 
     function renderHelpContent() {
+      document.getElementById('newColorGarments').innerHTML = MFA_CATALOG.map(g => '<label class="flex items-center gap-2 text-xs"><input type="checkbox" value="' + g.id + '" />' + escapeHtml(g.mfr + ' ' + g.id) + '</label>').join('');
       renderGarmentCodeTable();
       const row = g => '<div class="bg-slate-950 border border-slate-700 rounded-lg p-3"><span class="font-bold">' + g.mfr + " " + g.id + '</span><p class="text-xs text-slate-400">' + g.name + '</p></div>';
       document.getElementById("betterGuide").innerHTML = MFA_CATALOG.filter(g => getCategory(g.id) === "Better").map(row).join("");
@@ -1322,6 +1334,72 @@
         console.error(error);
         alert("Standard Prices were not changed because the shared cloud workspace did not confirm the update: " + error.message);
       }
+    }
+
+    let customCatalogColors = [];
+
+    function availableColorCodes(g) {
+      return [...g.defaultColors, ...customCatalogColors.filter(c => c.models.includes(g.id)).map(c => c.code)];
+    }
+
+    function applyCustomColors(colors) {
+      customCatalogColors = colors;
+      colors.forEach(c => { COLOR_GUIDE[c.code] = { name: c.name, hex: c.hex }; });
+      MFA_CATALOG.forEach(g => {
+        const container = document.getElementById('colors-' + g.id);
+        if (!container) return;
+        colors.filter(c => c.models.includes(g.id)).forEach(c => {
+          if (container.querySelector('input[data-color-code="' + c.code + '"]')) return;
+          const label = document.createElement('label');
+          label.className = 'flex items-center gap-2 min-h-10 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-slate-200 cursor-pointer';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.dataset.colorCode = c.code;
+          input.addEventListener('change', renderGeneratedMatrix);
+          const swatch = document.createElement('span');
+          swatch.className = 'color-swatch h-4 w-4 shrink-0 rounded-full border border-slate-600';
+          swatch.style.background = c.hex;
+          label.append(input, swatch, document.createTextNode(c.name));
+          container.append(label);
+        });
+      });
+      const guide = document.getElementById('colorGuide');
+      guide.querySelectorAll('[data-custom-color]').forEach(el => el.remove());
+      colors.forEach(c => {
+        const entry = document.createElement('div');
+        entry.dataset.customColor = c.code;
+        entry.className = 'border border-slate-700 rounded-lg p-3 text-sm';
+        entry.textContent = c.name + ' · ' + c.models.join(', ');
+        guide.append(entry);
+      });
+    }
+
+    async function addCatalogColor() {
+      if (!requireCloudAccess()) return;
+      const name = document.getElementById('newColorName').value.trim().replace(/\s+/g, ' ');
+      const hex = document.getElementById('newColorHex').value;
+      const models = [...document.querySelectorAll('#newColorGarments input:checked')].map(el => el.value);
+      const status = document.getElementById('newColorStatus');
+      if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,49}$/.test(name) || !models.length) {
+        status.textContent = 'Enter a color name using letters, numbers, spaces or hyphens, and select at least one garment.';
+        return;
+      }
+      if (Object.values(COLOR_GUIDE).some(c => skuColorName(c.name) === skuColorName(name))) {
+        status.textContent = 'That color name already exists. Choose a new color name.';
+        return;
+      }
+      const button = document.getElementById('addColorButton');
+      button.disabled = true;
+      status.textContent = 'Saving color…';
+      try {
+        const result = await cloudRequest('addCatalogColor', { color: { name, hex, models } });
+        applyCustomColors(result.customColors);
+        renderGeneratedMatrix();
+        document.getElementById('newColorName').value = '';
+        document.querySelectorAll('#newColorGarments input').forEach(el => { el.checked = false; });
+        status.textContent = 'Color saved across devices. Select it in the catalog builder to use it. Existing catalogs are unchanged.';
+      } catch (error) { status.textContent = 'Color was not saved: ' + error.message; }
+      finally { button.disabled = false; }
     }
 
     function getGarmentCodes() {
